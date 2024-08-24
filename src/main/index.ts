@@ -1,14 +1,14 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { format, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import path from 'path'
 import fs from 'fs'
+import axios from 'axios'
 
 puppeteer.use(StealthPlugin())
-
 interface Profile {
   name: string
   useragent: string
@@ -180,6 +180,23 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
+ipcMain.handle('test-proxy', async (_, proxy: string) => {
+  try {
+    const response = await axios.get('https://api.ipify.org', {
+      proxy: {
+        host: proxy.split('://')[1].split(':')[0],
+        port: parseInt(proxy.split('://')[1].split(':')[1])
+      }
+    })
+    if (response.status === 200) {
+      return true
+    }
+    return false // Add return statement
+  } catch (error) {
+    console.error(error)
+    return false
+  }
+})
 
 async function launchProfile(name: string) {
   const profilesDir = path.join(__dirname, 'profiles')
@@ -191,7 +208,7 @@ async function launchProfile(name: string) {
     const browser = await puppeteer.launch({
       headless: false,
       defaultViewport: null,
-      args: ['--start-maximized', ...(profile.proxy ? [`--proxy-server=${profile.proxy}`] : [])],
+      args: [...(profile.proxy ? [`--proxy-server=${profile.proxy}`] : [])],
       userDataDir: path.join(profilesDir, name)
     })
 
@@ -200,8 +217,10 @@ async function launchProfile(name: string) {
     if (profile.useragent) {
       await page.setUserAgent(profile.useragent)
     }
-
-    await page.goto('https://bot.sannysoft.com')
+    //on close
+    browser.on('disconnected', () => {
+      console.log('Browser closed')
+    })
   } else {
     console.error('Profile not found')
   }

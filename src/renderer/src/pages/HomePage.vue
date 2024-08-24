@@ -88,6 +88,7 @@ const filteredProfiles = computed(() => {
 function launchProfile(profile) {
   console.log('Launch button clicked', profile)
   window.electron.ipcRenderer.send('launch-profile', profile.name)
+  store.commit('setLanchedProfile', profile.name)
 }
 
 function editProfile(profile) {

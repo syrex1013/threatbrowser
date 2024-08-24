@@ -32,6 +32,13 @@ const store = createStore({
     deleteProfile(state, profileName) {
       window.electron.ipcRenderer.send('delete-profile', profileName)
       state.profiles = state.profiles.filter((profile) => profile.name !== profileName)
+    },
+    setLanchedProfile(state, profileName) {
+      state.profiles.forEach((profile) => {
+        if (profile.name === profileName) {
+          profile.launched = !profile.launched
+        }
+      })
     }
   }
 })
