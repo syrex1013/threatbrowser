@@ -39,7 +39,6 @@
     <CreateProfileModal
       :is-visible-modal="isModalVisible"
       @update:model-value="isModalVisible = $event"
-      @profile-created="refreshProfiles"
     />
   </v-app>
 </template>
@@ -47,7 +46,6 @@
 <script setup>
 import { ref } from 'vue'
 import CreateProfileModal from './components/CreateProfileModal.vue'
-
 const drawer = ref(false)
 const searchQuery = ref('')
 const isModalVisible = ref(false)
@@ -55,14 +53,6 @@ const items = [
   { title: 'Profiles', icon: 'mdi-account', route: '/' },
   { title: 'Proxies', icon: 'mdi-shield-account', route: '/proxies' }
 ]
-
-function refreshProfiles() {
-  window.electron.ipcRenderer.invoke('load-profiles', '').then((profiles) => {
-    // Assuming you have a way to update the profiles in HomePage.vue
-    // You might need to use a global state management or props to pass the profiles
-    // For example, using Vuex or a simple event bus
-  })
-}
 </script>
 
 <style scoped>

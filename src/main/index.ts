@@ -65,7 +65,7 @@ app.whenReady().then(() => {
   // Launch Profile
   ipcMain.on('launch-profile', async (event, args) => {
     console.log('Launching profile:', args)
-    launchProfile(args.name) // Assuming args is an object and name is the key
+    launchProfile(args) // Assuming args is an object and name is the key
   })
 
   // Load profiles
@@ -114,6 +114,28 @@ app.whenReady().then(() => {
     fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
   })
 
+  // update-profile
+  ipcMain.on('update-profile', async (event, { profileData, oldProfileName }) => {
+    console.log('Updating profile')
+    const profilesDir = path.join(__dirname, 'profiles')
+    const oldProfileDir = path.join(profilesDir, oldProfileName)
+    const newProfileDir = path.join(profilesDir, profileData.name)
+    const profilePath = path.join(newProfileDir, 'profile.json')
+
+    if (oldProfileName !== profileData.name && fs.existsSync(oldProfileDir)) {
+      fs.renameSync(oldProfileDir, newProfileDir)
+    }
+
+    const jsonProfile: Profile = {
+      name: profileData.name,
+      useragent: profileData.useragent,
+      notes: profileData.notes,
+      proxy: profileData.proxy
+    }
+
+    fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
+  })
+
   ipcMain.on('delete-profile', (event, profileName: string) => {
     const profileDir = path.join(__dirname, 'profiles', profileName)
 
@@ -156,7 +178,8 @@ async function launchProfile(name: string) {
     const browser = await puppeteer.launch({
       headless: false,
       defaultViewport: null,
-      args: ['--start-maximized', ...(profile.proxy ? [`--proxy-server=${profile.proxy}`] : [])]
+      args: ['--start-maximized', ...(profile.proxy ? [`--proxy-server=${profile.proxy}`] : [])],
+      userDataDir: path.join(profilesDir, name)
     })
 
     const page = await browser.newPage()
@@ -165,7 +188,7 @@ async function launchProfile(name: string) {
       await page.setUserAgent(profile.useragent)
     }
 
-    await page.goto('https://www.google.com')
+    await page.goto('https://bot.sannysoft.com')
   } else {
     console.error('Profile not found')
   }

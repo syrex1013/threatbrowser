@@ -13,6 +13,29 @@ import * as directives from 'vuetify/directives'
 //router
 import router from './router/router'
 
+//store
+
+import { createStore } from 'vuex'
+
+const store = createStore({
+  state() {
+    return {
+      profiles: []
+    }
+  },
+  mutations: {
+    fetchProfiles(state) {
+      window.electron.ipcRenderer.invoke('load-profiles', '').then((loadedProfiles) => {
+        state.profiles = loadedProfiles
+      })
+    },
+    deleteProfile(state, profileName) {
+      window.electron.ipcRenderer.send('delete-profile', profileName)
+      state.profiles = state.profiles.filter((profile) => profile.name !== profileName)
+    }
+  }
+})
+
 const vuetify = createVuetify({
   components,
   directives,
@@ -21,4 +44,4 @@ const vuetify = createVuetify({
     defaultTheme: 'dark'
   }
 })
-createApp(App).use(vuetify).use(router).mount('#app')
+createApp(App).use(vuetify).use(router).use(store).mount('#app')

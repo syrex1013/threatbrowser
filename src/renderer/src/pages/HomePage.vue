@@ -38,11 +38,19 @@
         </div>
       </template>
     </v-data-table>
+    <CreateProfileModal
+      :is-visible-modal="isEditModalVisible"
+      :profile="editingProfile"
+      :old-profile-name="oldProfileName"
+      @update:model-value="isEditModalVisible = $event"
+    />
   </v-container>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
+import { useStore } from 'vuex'
+import CreateProfileModal from '../components/CreateProfileModal.vue'
 
 // Props to accept searchQuery from App.vue
 const props = defineProps({
@@ -60,15 +68,13 @@ const headers = [
   { title: 'Actions', value: 'actions', sortable: false }
 ]
 
-const profiles = ref([]) // Declare and initialize the profiles variable
+const store = useStore()
 
-function loadProfiles() {
-  window.electron.ipcRenderer.invoke('load-profiles', '').then((loadedProfiles) => {
-    profiles.value = loadedProfiles
-  })
-}
+const profiles = computed(() => store.state.profiles)
 
-loadProfiles() // Load profiles when the component is mounted
+const isEditModalVisible = ref(false)
+const editingProfile = ref(null)
+const oldProfileName = ref('')
 
 // Computed property to filter profiles based on searchQuery
 const filteredProfiles = computed(() => {
@@ -84,10 +90,14 @@ function launchProfile(profile) {
 
 function editProfile(profile) {
   console.log('Edit Profile button clicked', profile)
+  editingProfile.value = { ...profile }
+  oldProfileName.value = profile.name
+  isEditModalVisible.value = true
 }
 
 function deleteProfile(profile) {
   console.log('Delete Profile button clicked', profile)
+  store.commit('deleteProfile', profile.name)
 }
 </script>
 
