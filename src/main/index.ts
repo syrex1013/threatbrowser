@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { format, join } from 'path'
+import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import puppeteer from 'puppeteer-extra'
@@ -63,7 +63,7 @@ app.whenReady().then(() => {
   })
 
   // Launch Profile
-  ipcMain.on('launch-profile', async (event, args) => {
+  ipcMain.on('launch-profile', async (_, args) => {
     console.log('Launching profile:', args)
     launchProfile(args) // Assuming args is an object and name is the key
   })
@@ -90,7 +90,7 @@ app.whenReady().then(() => {
   })
 
   // Create Profile
-  ipcMain.on('create-profile', async (event, profile) => {
+  ipcMain.on('create-profile', async (_, profile) => {
     console.log('Creating profile')
     const profilesDir = path.join(__dirname, 'profiles')
     console.log(profilesDir)
@@ -115,7 +115,7 @@ app.whenReady().then(() => {
   })
 
   // update-profile
-  ipcMain.on('update-profile', async (event, { profileData, oldProfileName }) => {
+  ipcMain.on('update-profile', async (_, { profileData, oldProfileName }) => {
     console.log('Updating profile')
     const profilesDir = path.join(__dirname, 'profiles')
     const oldProfileDir = path.join(profilesDir, oldProfileName)
@@ -137,10 +137,10 @@ app.whenReady().then(() => {
   })
 
   //update-note
-  ipcMain.on('update-note', async (event, { data }) => {
+  ipcMain.on('update-note', async (_, { data }) => {
     console.log('Updating note')
     const profilesDir = path.join(__dirname, 'profiles')
-    const profileDir = path.join(profilesDir, data.profileName)
+    const profileDir = path.join(profilesDir, data.name)
     const profilePath = path.join(profileDir, 'profile.json')
 
     const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))

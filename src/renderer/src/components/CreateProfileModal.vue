@@ -4,27 +4,19 @@
       <v-card-title>
         <span class="headline">{{ profile ? 'Edit Profile' : 'Create New Profile' }}</span>
       </v-card-title>
+
       <v-card-subtitle>
         <v-alert v-if="alert.visible" :type="alert.type" dismissible @input="alert.visible = false">
           {{ alert.message }}
         </v-alert>
+
         <v-form ref="form" v-model="valid" lazy-validation>
-          <v-text-field
-            v-model="name"
-            :rules="[rules.required]"
-            label="Profile Name"
-            required
-          ></v-text-field>
-          <v-text-field
-            v-model="useragent"
-            :rules="[rules.required]"
-            label="User Agent"
-            required
-          ></v-text-field>
+          <v-text-field v-model="name" :rules="[rules.required]" label="Profile Name" required />
+          <v-text-field v-model="useragent" :rules="[rules.required]" label="User Agent" required />
           <v-btn text @click="generateRandomUserAgent">Generate Random User Agent</v-btn>
-          <v-text-field v-model="notes" label="Notes"></v-text-field>
-          <v-text-field v-model="proxy" label="Proxy (optional)"></v-text-field>
-          <v-btn text @click="testProxyConnection" :disabled="loading">
+          <v-text-field v-model="notes" label="Notes" />
+          <v-text-field v-model="proxy" label="Proxy (optional)" />
+          <v-btn text :disabled="loading" @click="testProxyConnection">
             Test Proxy Connection
             <v-progress-circular
               v-if="loading"
@@ -32,12 +24,13 @@
               color="primary"
               size="20"
               class="ml-2"
-            ></v-progress-circular>
+            />
           </v-btn>
         </v-form>
       </v-card-subtitle>
+
       <v-card-actions>
-        <v-spacer></v-spacer>
+        <v-spacer />
         <v-btn text @click="close">Cancel</v-btn>
         <v-btn color="primary" @click="submit">{{ profile ? 'Save' : 'Create' }}</v-btn>
       </v-card-actions>
@@ -49,7 +42,6 @@
 import { ref, watch } from 'vue'
 import { useStore } from 'vuex'
 import randomUseragent from 'random-useragent'
-import axios from 'axios'
 
 const props = defineProps({
   isVisibleModal: {
@@ -65,6 +57,7 @@ const props = defineProps({
     default: ''
   }
 })
+
 const emit = defineEmits(['update:model-value', 'profile-created'])
 const valid = ref(false)
 const name = ref('')
@@ -78,6 +71,7 @@ const alert = ref({
 })
 const loading = ref(false)
 const store = useStore()
+
 const rules = {
   required: (value) => !!value || 'Required.'
 }
@@ -91,12 +85,10 @@ watch(
       notes.value = newProfile.notes
       proxy.value = newProfile.proxy
     } else {
-      name.value = ''
-      useragent.value = ''
-      notes.value = ''
-      proxy.value = ''
+      resetFields()
     }
-  }
+  },
+  { immediate: true } // Ensures watch is triggered on initial load
 )
 
 watch(
@@ -133,6 +125,13 @@ function resetAlert() {
   }
 }
 
+function resetFields() {
+  name.value = ''
+  useragent.value = ''
+  notes.value = ''
+  proxy.value = ''
+}
+
 async function submit() {
   if (valid.value) {
     if (proxy.value && !validateProxy(proxy.value)) {
@@ -150,6 +149,7 @@ async function submit() {
       notes: notes.value,
       proxy: proxy.value
     }
+
     if (props.profile) {
       // Handle profile update logic
       window.electron.ipcRenderer.send('update-profile', {
@@ -160,6 +160,7 @@ async function submit() {
       // Handle profile creation logic
       window.electron.ipcRenderer.send('create-profile', profileData)
     }
+
     store.commit('fetchProfiles')
     close()
   }
@@ -168,32 +169,24 @@ async function submit() {
 async function testProxyConnection() {
   if (proxy.value && validateProxy(proxy.value)) {
     loading.value = true
-    window.electron.ipcRenderer
-      .invoke('test-proxy', proxy.value)
-      .then((response) => {
-        loading.value = false
-        if (response == true) {
-          alert.value = {
-            visible: true,
-            message: 'Proxy connection successful.',
-            type: 'success'
-          }
-        } else {
-          alert.value = {
-            visible: true,
-            message: 'Proxy connection failed. Please check your proxy settings.',
-            type: 'error'
-          }
-        }
-      })
-      .catch((error) => {
-        loading.value = false
-        alert.value = {
-          visible: true,
-          message: `Proxy connection failed: ${error.message}`,
-          type: 'error'
-        }
-      })
+    try {
+      const response = await window.electron.ipcRenderer.invoke('test-proxy', proxy.value)
+      alert.value = {
+        visible: true,
+        message: response
+          ? 'Proxy connection successful.'
+          : 'Proxy connection failed. Please check your proxy settings.',
+        type: response ? 'success' : 'error'
+      }
+    } catch (error) {
+      alert.value = {
+        visible: true,
+        message: `Proxy connection failed: ${error.message}`,
+        type: 'error'
+      }
+    } finally {
+      loading.value = false
+    }
   } else {
     alert.value = {
       visible: true,
