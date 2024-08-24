@@ -136,6 +136,19 @@ app.whenReady().then(() => {
     fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
   })
 
+  //update-note
+  ipcMain.on('update-note', async (event, { data }) => {
+    console.log('Updating note')
+    const profilesDir = path.join(__dirname, 'profiles')
+    const profileDir = path.join(profilesDir, data.profileName)
+    const profilePath = path.join(profileDir, 'profile.json')
+
+    const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
+    profile.notes = data.note
+
+    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2))
+  })
+
   ipcMain.on('delete-profile', (event, profileName: string) => {
     const profileDir = path.join(__dirname, 'profiles', profileName)
 

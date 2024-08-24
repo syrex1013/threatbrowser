@@ -18,9 +18,13 @@
             label="User Agent"
             required
           ></v-text-field>
+          <v-btn text @click="generateRandomUserAgent">Generate Random User Agent</v-btn>
           <v-text-field v-model="notes" label="Notes"></v-text-field>
           <v-text-field v-model="proxy" label="Proxy (optional)"></v-text-field>
         </v-form>
+        <v-alert v-if="alert.visible" :type="alert.type" dismissible @input="alert.visible = false">
+          {{ alert.message }}
+        </v-alert>
       </v-card-subtitle>
       <v-card-actions>
         <v-spacer></v-spacer>
@@ -34,6 +38,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useStore } from 'vuex'
+import randomUseragent from 'random-useragent'
 
 const props = defineProps({
   isVisibleModal: {
@@ -55,6 +60,11 @@ const name = ref('')
 const useragent = ref('')
 const notes = ref('')
 const proxy = ref('')
+const alert = ref({
+  visible: false,
+  message: '',
+  type: 'error'
+})
 const store = useStore()
 const rules = {
   required: (value) => !!value || 'Required.'
@@ -85,8 +95,26 @@ function close() {
   emit('update:model-value', false)
 }
 
+function validateProxy(proxy) {
+  const regex = /^(http|https|socks4|socks5):\/\/(.+)$/
+  return regex.test(proxy)
+}
+
+function generateRandomUserAgent() {
+  useragent.value = randomUseragent.getRandom()
+}
+
 async function submit() {
   if (valid.value) {
+    if (proxy.value && !validateProxy(proxy.value)) {
+      alert.value = {
+        visible: true,
+        message: 'Invalid proxy format. Please enter a valid proxy.',
+        type: 'error'
+      }
+      return
+    }
+
     const profileData = {
       name: name.value,
       useragent: useragent.value,

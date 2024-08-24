@@ -9,18 +9,21 @@
           {{ item.status }}
         </v-chip>
       </template>
-
       <template #item.proxy="{ item }">
         <v-icon color="teal">{{
           item.proxy === 'Proxy 1' ? 'mdi-shield-check' : 'mdi-shield-off'
         }}</v-icon>
         {{ item.proxy }}
       </template>
-
       <template #item.notes="{ item }">
-        <v-textarea v-model="item.notes" outlined rows="2" class="notes-textarea"></v-textarea>
+        <v-textarea
+          v-model="item.notes"
+          outlined
+          rows="2"
+          class="notes-textarea"
+          @change="updateNote(item)"
+        ></v-textarea>
       </template>
-
       <template #item.actions="{ item }">
         <div class="action-buttons">
           <v-btn color="green" small @click="launchProfile(item)">
@@ -69,9 +72,7 @@ const headers = [
 ]
 
 const store = useStore()
-
 const profiles = computed(() => store.state.profiles)
-
 const isEditModalVisible = ref(false)
 const editingProfile = ref(null)
 const oldProfileName = ref('')
@@ -83,6 +84,7 @@ const filteredProfiles = computed(() => {
     profile.name.toLowerCase().includes(props.searchQuery.toLowerCase())
   )
 })
+
 function launchProfile(profile) {
   console.log('Launch button clicked', profile)
   window.electron.ipcRenderer.send('launch-profile', profile.name)
@@ -98,6 +100,14 @@ function editProfile(profile) {
 function deleteProfile(profile) {
   console.log('Delete Profile button clicked', profile)
   store.commit('deleteProfile', profile.name)
+}
+
+function updateNote(profile) {
+  console.log('Note updated', profile)
+  window.electron.ipcRenderer.send('update-note', {
+    name: profile.name,
+    notes: profile.notes
+  })
 }
 </script>
 
