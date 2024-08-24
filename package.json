@@ -25,6 +25,10 @@
     "@electron-toolkit/utils": "^3.0.0",
     "@mdi/font": "^7.4.47",
     "electron-updater": "^6.1.7",
+    "puppeteer": "^23.1.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "uuid": "^10.0.0",
     "vite-plugin-vuetify": "^2.0.4",
     "vue-router": "^4.0.13",
     "vuetify": "^3.7.0"

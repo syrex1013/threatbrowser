@@ -1,7 +1,7 @@
 <template>
   <v-container fluid>
-    <v-data-table :headers="headers" :items="profiles" class="elevation-1">
-      <template v-slot:item.status="{ item }">
+    <v-data-table :headers="headers" :items="filteredProfiles" class="elevation-1">
+      <template #item.status="{ item }">
         <v-chip color="primary" dark>
           <v-icon left>{{
             item.status === 'Active' ? 'mdi-check-circle' : 'mdi-close-circle'
@@ -10,19 +10,23 @@
         </v-chip>
       </template>
 
-      <template v-slot:item.proxy="{ item }">
+      <template #item.proxy="{ item }">
         <v-icon color="teal">{{
           item.proxy === 'Proxy 1' ? 'mdi-shield-check' : 'mdi-shield-off'
         }}</v-icon>
         {{ item.proxy }}
       </template>
 
-      <template v-slot:item.notes="{ item }">
+      <template #item.notes="{ item }">
         <v-textarea v-model="item.notes" outlined rows="2" class="notes-textarea"></v-textarea>
       </template>
 
-      <template v-slot:item.actions="{ item }">
+      <template #item.actions="{ item }">
         <div class="action-buttons">
+          <v-btn color="green" small @click="launchProfile(item)">
+            <v-icon left>mdi-play-circle</v-icon>
+            Launch
+          </v-btn>
           <v-btn color="blue" small @click="editProfile(item)">
             <v-icon left>mdi-pencil</v-icon>
             Edit
@@ -38,7 +42,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+
+// Props to accept searchQuery from App.vue
+const props = defineProps({
+  searchQuery: {
+    type: String,
+    default: ''
+  }
+})
 
 const headers = [
   { title: 'Name', value: 'name' },
@@ -48,23 +60,33 @@ const headers = [
   { title: 'Actions', value: 'actions', sortable: false }
 ]
 
-const profiles = ref([
-  { name: 'Profile 1', status: 'Active', proxy: 'Proxy 1', notes: '' },
-  { name: 'Profile 2', status: 'Inactive', proxy: 'Proxy 2', notes: '' }
-])
+const profiles = ref([]) // Declare and initialize the profiles variable
 
-function createProfile() {
-  // Logic to create a profile
-  console.log('Create Profile button clicked')
+function loadProfiles() {
+  window.electron.ipcRenderer.invoke('load-profiles', '').then((loadedProfiles) => {
+    profiles.value = loadedProfiles
+  })
+}
+
+loadProfiles() // Load profiles when the component is mounted
+
+// Computed property to filter profiles based on searchQuery
+const filteredProfiles = computed(() => {
+  if (!props.searchQuery) return profiles.value
+  return profiles.value.filter((profile) =>
+    profile.name.toLowerCase().includes(props.searchQuery.toLowerCase())
+  )
+})
+function launchProfile(profile) {
+  console.log('Launch button clicked', profile)
+  window.electron.ipcRenderer.send('launch-profile', profile.name)
 }
 
 function editProfile(profile) {
-  // Logic to edit a profile
   console.log('Edit Profile button clicked', profile)
 }
 
 function deleteProfile(profile) {
-  // Logic to delete a profile
   console.log('Delete Profile button clicked', profile)
 }
 </script>
@@ -72,13 +94,13 @@ function deleteProfile(profile) {
 <style scoped>
 /* Style for notes textarea */
 .notes-textarea {
-  min-height: 50px; /* Adjust height as needed */
-  margin-top: 8px; /* Adjust top margin as needed */
+  min-height: 50px;
+  margin-top: 8px;
 }
 
 /* Style for action buttons container */
 .action-buttons {
   display: flex;
-  gap: 8px; /* Adjust spacing between buttons */
+  gap: 8px;
 }
 </style>

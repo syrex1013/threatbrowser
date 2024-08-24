@@ -1,12 +1,10 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import Home from '../pages/home.vue'
-import SinglePhish from '../pages/singlephish.vue'
-import LivePhish from '../pages/livephish.vue'
+import HomePage from '../pages/HomePage.vue'
+import ProxyPage from '../pages/ProxyPage.vue'
 
 const routes = [
-  { path: '/', component: Home },
-  { path: '/single-phish', component: SinglePhish },
-  { path: '/live-phish', component: LivePhish }
+  { path: '/', component: HomePage },
+  { path: '/proxies', component: ProxyPage }
 ]
 
 const router = createRouter({
