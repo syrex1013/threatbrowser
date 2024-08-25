@@ -54,7 +54,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import CreateProfileModal from '../components/CreateProfileModal.vue'
 
@@ -108,7 +108,6 @@ function deleteProfile(profile) {
 }
 
 function updateNote(profile) {
-  console.log('Note updated', profile)
   window.electron.ipcRenderer.send('update-note', {
     name: profile.name,
     notes: profile.notes
@@ -135,6 +134,11 @@ function getProxyName(proxyId) {
   const proxy = proxies.value.find((p) => p.id === proxyId)
   return proxy ? proxy.name : 'Unknown'
 }
+
+onMounted(() => {
+  store.commit('fetchProfiles')
+  store.commit('fetchProxies')
+})
 </script>
 
 <style scoped>

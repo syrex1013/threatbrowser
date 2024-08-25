@@ -3,6 +3,10 @@ import fs from 'fs'
 import path from 'path'
 import { ProxyData } from './types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import { app } from 'electron'
+
+const __dirname = app.getPath('userData')
+console.log('User data:', __dirname)
 
 export async function testProxy(proxy: string) {
   console.log('Testing proxy: ', proxy)
@@ -21,7 +25,7 @@ export async function testProxy(proxy: string) {
     console.log('Proxy Response:', response.data)
     return response.status === 200
   } catch (error) {
-    console.error('Proxy Error:', error.message)
+    console.error('Proxy Error:', error)
     return false
   }
 }
@@ -35,7 +39,7 @@ export async function getProxyCountry(proxy: string) {
     console.log('Proxy Country:', data.country)
     return data.country
   } catch (error) {
-    console.error('Proxy Error:', error.message)
+    console.error('Proxy Error:', error)
     return 'Unknown'
   }
 }

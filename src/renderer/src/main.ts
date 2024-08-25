@@ -9,7 +9,7 @@ import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-
+import { Profile, ProxyData } from '../../main/types'
 //router
 import router from './router/router'
 
@@ -20,8 +20,8 @@ import { createStore } from 'vuex'
 const store = createStore({
   state() {
     return {
-      profiles: [],
-      proxies: []
+      profiles: [] as Profile[],
+      proxies: [] as ProxyData[]
     }
   },
   mutations: {

@@ -4,6 +4,7 @@ export interface Profile {
   notes: string
   proxy: string
   proxyId?: number
+  launched?: boolean
 }
 
 export interface ProxyData {

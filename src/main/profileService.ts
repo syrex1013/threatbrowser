@@ -3,8 +3,12 @@ import path from 'path'
 import { Profile } from './types'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-puppeteer.use(StealthPlugin())
+import { app } from 'electron'
 
+const __dirname = app.getPath('userData')
+console.log('User data:', __dirname)
+
+puppeteer.use(StealthPlugin())
 export async function loadProfiles() {
   console.log('Loading profiles...')
   const profilesDir = path.join(__dirname, 'profiles')
@@ -128,9 +132,10 @@ export async function UpdateNote(data) {
   const profilesDir = path.join(__dirname, 'profiles')
   const profileDir = path.join(profilesDir, data.name)
   const profilePath = path.join(profileDir, 'profile.json')
+  console.log('Profile path:', profilePath)
 
   const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-  profile.notes = data.note
+  profile.notes = data.notes
 
   fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2))
 }
