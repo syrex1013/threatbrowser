@@ -4,7 +4,7 @@
       <v-app-bar-nav-icon variant="text" @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
       <v-toolbar-title>ThreatBrowser</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn small @click="isModalVisible = !isModalVisible">
+      <v-btn small class="ma-4" @click="isModalVisible = !isModalVisible">
         <v-icon left>mdi-account-plus</v-icon>
         Create profile
       </v-btn>
@@ -14,7 +14,7 @@
         label="Search Profiles"
         single-line
         hide-details
-        class="search-bar"
+        class="search-bar ma-4"
       ></v-text-field>
     </v-app-bar>
     <v-main>
