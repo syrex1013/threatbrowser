@@ -49,7 +49,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useStore } from 'vuex'
-import randomUseragent from 'random-useragent'
+import UserAgent from 'user-agents'
 
 const props = defineProps({
   isVisibleModal: {
@@ -145,7 +145,8 @@ function validateProxy(proxy) {
 }
 
 function generateRandomUserAgent() {
-  useragent.value = randomUseragent.getRandom()
+  const userAgent = new UserAgent()
+  useragent.value = userAgent.toString()
 }
 
 function resetAlert() {

@@ -4,9 +4,12 @@ import path from 'path'
 import { ProxyData } from './types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { app } from 'electron'
+import { is } from '@electron-toolkit/utils'
 
-const __dirname = app.getPath('userData')
-console.log('User data:', __dirname)
+if (!is.dev) {
+  const __dirname = app.getPath('userData')
+  console.log('User data:', __dirname)
+}
 
 export async function testProxy(proxy: string) {
   console.log('Testing proxy: ', proxy)

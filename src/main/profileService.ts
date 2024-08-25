@@ -4,9 +4,12 @@ import { Profile } from './types'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { app } from 'electron'
+import { is } from '@electron-toolkit/utils'
 
-const __dirname = app.getPath('userData')
-console.log('User data:', __dirname)
+if (!is.dev) {
+  const __dirname = app.getPath('userData')
+  console.log('User data:', __dirname)
+}
 
 puppeteer.use(StealthPlugin())
 export async function loadProfiles() {
