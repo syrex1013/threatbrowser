@@ -26,12 +26,12 @@
 
     <!-- Action Buttons -->
     <v-row class="mb-4" justify="center">
-      <v-btn color="primary" @click="addProxies" class="mx-2">
+      <v-btn color="primary" class="mx-2" @click="addProxies">
         <v-icon left>mdi-plus-circle</v-icon>
         Add Proxies
       </v-btn>
 
-      <v-btn color="secondary" @click="checkAllProxies" :disabled="loading" class="mx-2">
+      <v-btn color="secondary" :disabled="loading" class="mx-2" @click="checkAllProxies">
         <v-icon left>mdi-check-network-outline</v-icon>
         Check All Proxies
         <v-progress-circular
@@ -50,28 +50,101 @@
       :items="proxies"
       class="elevation-1 proxy-table"
       item-value="host"
-      dense
       :items-per-page="5"
     >
-      <template #column.protocol="{ column }">
-        <v-chip color="teal" dark>{{ column.value.toUpperCase() }}</v-chip>
+      <template #item.country="{ item }">
+        <v-chip v-if="item.country !== 'Unknown'" color="primary" dark>
+          <v-icon left>
+            <img
+              :src="`http://purecatamphetamine.github.io/country-flag-icons/3x2/${item.country}.svg`"
+              alt="Country Flag"
+            />
+          </v-icon>
+          {{ item.country }}
+        </v-chip>
+        <template v-else> Unknown </template>
       </template>
-      <template #item.actions="{ item }">
-        <v-btn color="success" small @click="checkProxy(item)" class="mr-2">
-          <v-icon left>mdi-check-network</v-icon>
-          Check
-        </v-btn>
-        <v-btn color="primary" small @click="openEditProxyModal(item)" class="mr-2">
-          <v-icon left>mdi-pencil</v-icon>
-          Edit
-        </v-btn>
-        <v-btn color="error" small @click="deleteProxy(item)">
-          <v-icon left>mdi-delete</v-icon>
-          Delete
-        </v-btn>
+      <!-- Add icons to headers -->
+      <template #column.protocol="{ column }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-network</v-icon>
+          <span class="ml-2">{{ column.text }}</span>
+        </span>
+      </template>
+
+      <template #item.username="{ item }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-account</v-icon>
+          <span class="ml-2">{{ wrapText(item.username, 20) }}</span>
+        </span>
+      </template>
+
+      <template #item.password="{ item }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-lock</v-icon>
+          <span class="ml-2">{{ wrapText(item.password, 20) }}</span>
+        </span>
+      </template>
+
+      <template #column.port="{ column }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-port-network</v-icon>
+          <span class="ml-2">{{ column.text }}</span>
+        </span>
+      </template>
+
+      <template #column.status="{ column }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-status</v-icon>
+          <span class="ml-2">{{ column.text }}</span>
+        </span>
+      </template>
+
+      <!-- Display data with color-coded items -->
+      <template #item.protocol="{ item }">
+        <v-chip color="teal" dark>
+          <v-icon left>
+            {{
+              item.protocol === 'http'
+                ? 'mdi-web'
+                : item.protocol === 'https'
+                  ? 'mdi-lock'
+                  : item.protocol === 'socks4' || item.protocol === 'socks5'
+                    ? 'mdi-socks'
+                    : 'mdi-help-circle'
+            }}
+          </v-icon>
+          {{ item.protocol.toUpperCase() }}
+        </v-chip>
       </template>
       <template #item.status="{ item }">
-        <v-chip :color="getStatusColor(item.status)" dark>{{ item.status }}</v-chip>
+        <v-chip :color="getStatusColor(item.status)" dark>
+          <v-icon left>
+            {{
+              item.status === 'Working'
+                ? 'mdi-check-circle'
+                : item.status === 'Not Working'
+                  ? 'mdi-close-circle'
+                  : item.status === 'Checking...'
+                    ? 'mdi-progress-clock'
+                    : 'mdi-help-circle'
+            }}
+          </v-icon>
+          {{ item.status }}
+        </v-chip>
+      </template>
+      <template #item.actions="{ item }">
+        <div class="action-buttons">
+          <v-btn color="success" small class="mr-2" @click="checkProxy(item)">
+            <v-icon left>mdi-check-network</v-icon>
+          </v-btn>
+          <v-btn color="primary" small class="mr-2" @click="openEditProxyModal(item)">
+            <v-icon left>mdi-pencil</v-icon>
+          </v-btn>
+          <v-btn color="error" small @click="deleteProxy(item)">
+            <v-icon left>mdi-delete</v-icon>
+          </v-btn>
+        </div>
       </template>
     </v-data-table>
 
@@ -81,6 +154,7 @@
         <v-card-title>Edit Proxy</v-card-title>
         <v-card-text>
           <v-form ref="editForm">
+            <v-text-field v-model="editProxyData.name" label="Name" required></v-text-field>
             <v-text-field
               v-model="editProxyData.protocol"
               label="Proxy Type"
@@ -138,6 +212,8 @@ const loading = ref(false)
 
 // Headers for the data table
 const headers = [
+  { title: 'Name', value: 'name' },
+  { title: 'Country', value: 'country' },
   { title: 'Proxy Type', value: 'protocol' },
   { title: 'Proxy Address', value: 'host' },
   { title: 'Port', value: 'port' },
@@ -147,6 +223,10 @@ const headers = [
   { title: 'Actions', value: 'actions', sortable: false }
 ]
 
+// Function to wrap text
+function wrapText(text: string, maxLength: number) {
+  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
+}
 // Function to handle file upload and read the contents
 function handleFileUpload() {
   if (!proxyFile.value) return
@@ -177,18 +257,33 @@ async function addProxies() {
 function parseProxy(proxy: string): ProxyData | null {
   const regex = /^(http|https|socks4|socks5):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/
   const match = proxy.match(regex)
+  const name = generateProxyName()
   if (match) {
     return {
+      name: name,
       protocol: match[1],
       username: match[2],
       password: match[3],
       host: match[4],
       port: parseInt(match[5], 10),
       status: 'Unchecked',
-      id: Date.now() // Generate a unique ID for the proxy
+      id: Date.now(), // Generate a unique ID for the proxy
+      country: 'Unknown'
     }
   }
   return null
+}
+
+// Generate name like Proxy 1, Proxy 2, etc.
+function generateProxyName() {
+  const existingNames = proxies.value.map((p) => p.name)
+  let index = 1
+  let name = `Proxy ${index}`
+  while (existingNames.includes(name)) {
+    index++
+    name = `Proxy ${index}`
+  }
+  return name
 }
 
 // Function to check proxy status and save it
@@ -201,7 +296,11 @@ async function checkProxy(proxy: ProxyData) {
       `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
     )
     proxy.status = result ? 'Working' : 'Not Working'
-
+    const countrResult = await window.electron.ipcRenderer.invoke(
+      'get-proxy-country',
+      `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
+    )
+    proxy.country = countrResult
     // Create a deep copy of the proxy to avoid serialization issues
     const proxyCopy = JSON.parse(JSON.stringify(proxy))
     await window.electron.ipcRenderer.invoke('edit-proxy', proxyCopy.id, proxyCopy)
@@ -295,5 +394,10 @@ function getStatusColor(status: string) {
 
 .proxy-table .v-chip {
   margin: 0;
+}
+.action-buttons {
+  display: flex;
+  gap: 4px; /* Adjust the gap between buttons */
+  flex-wrap: nowrap; /* Ensure buttons are in a single row */
 }
 </style>

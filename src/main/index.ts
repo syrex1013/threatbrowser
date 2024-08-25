@@ -12,7 +12,14 @@ import {
   UpdateNote,
   DeleteProfile
 } from './profileService'
-import { testProxy, CreateProxy, DeleteProxy, GetProxies, editProxy } from './proxyService'
+import {
+  testProxy,
+  CreateProxy,
+  DeleteProxy,
+  GetProxies,
+  editProxy,
+  getProxyCountry
+} from './proxyService'
 
 puppeteer.use(StealthPlugin())
 
@@ -117,6 +124,11 @@ app.whenReady().then(() => {
   // edit proxy
   ipcMain.handle('edit-proxy', async (_, proxyID, proxy) => {
     return await editProxy(proxyID, proxy)
+  })
+
+  // get proxy country
+  ipcMain.handle('get-proxy-country', async (_, proxy) => {
+    return await getProxyCountry(proxy)
   })
 
   createWindow()

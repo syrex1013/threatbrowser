@@ -6,6 +6,7 @@ export interface Profile {
 }
 
 export interface ProxyData {
+  name: string
   protocol: string
   host: string
   port: number
@@ -13,4 +14,5 @@ export interface ProxyData {
   password: string
   id: number
   status: string
+  country: string
 }

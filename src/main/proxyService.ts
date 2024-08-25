@@ -26,6 +26,20 @@ export async function testProxy(proxy: string) {
     return false
   }
 }
+
+export async function getProxyCountry(proxy: string) {
+  console.log('Getting proxy country')
+  try {
+    const proxydata = await parseProxy(proxy)
+    const response = await axios.get(`https://ipinfo.io/${proxydata.host}/json`)
+    const data = response.data
+    console.log('Proxy Country:', data.country)
+    return data.country
+  } catch (error) {
+    console.error('Proxy Error:', error.message)
+    return 'Unknown'
+  }
+}
 export async function parseProxy(proxy: string): Promise<ProxyData> {
   const [protocol, address] = proxy.split('://')
   const [credentials, hostAndPort] = address.split('@')
@@ -33,13 +47,15 @@ export async function parseProxy(proxy: string): Promise<ProxyData> {
   const [host, port] = hostAndPort.split(':')
 
   return {
+    name: '',
     protocol,
     host,
     port: parseInt(port, 10),
     username,
     password,
     id: Date.now(),
-    status: 'UnChecked'
+    status: 'UnChecked',
+    country: 'Unknown'
   }
 }
 export async function CreateProxy(ProxyData: ProxyData) {
@@ -57,13 +73,15 @@ export async function CreateProxy(ProxyData: ProxyData) {
 
   const proxyPath = path.join(proxyDir, 'proxy.json')
   const jsonProxy: ProxyData = {
+    name: ProxyData.name,
     protocol: ProxyData.protocol,
     host: ProxyData.host,
     port: ProxyData.port,
     username: ProxyData.username,
     password: ProxyData.password,
     id: ProxyData.id,
-    status: ProxyData.status
+    status: ProxyData.status,
+    country: ProxyData.country
   }
 
   fs.writeFileSync(proxyPath, JSON.stringify(jsonProxy))
@@ -106,13 +124,15 @@ export async function editProxy(ProxyID, ProxyData: ProxyData) {
 
   if (fs.existsSync(proxyPath)) {
     const jsonProxy: ProxyData = {
+      name: ProxyData.name,
       protocol: ProxyData.protocol,
       host: ProxyData.host,
       port: ProxyData.port,
       username: ProxyData.username,
       password: ProxyData.password,
       id: ProxyData.id,
-      status: ProxyData.status
+      status: ProxyData.status,
+      country: ProxyData.country
     }
 
     fs.writeFileSync(proxyPath, JSON.stringify(jsonProxy))
