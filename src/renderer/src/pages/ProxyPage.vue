@@ -373,29 +373,6 @@ function getStatusColor(status: string) {
   overflow: hidden;
 }
 
-.proxy-table .v-data-table-header th {
-  background-color: #f5f5f5;
-  font-weight: bold;
-  text-align: left;
-}
-
-.proxy-table .v-data-table__wrapper {
-  background-color: #ffffff;
-}
-
-.proxy-table .v-data-table-header th,
-.proxy-table .v-data-table__wrapper td {
-  padding: 12px;
-}
-
-.proxy-table .v-data-table__wrapper tr:hover {
-  background-color: #f1f1f1;
-}
-
-.proxy-table .v-data-table__wrapper td {
-  border-bottom: 1px solid #e0e0e0;
-}
-
 .proxy-table .v-chip {
   margin: 0;
 }

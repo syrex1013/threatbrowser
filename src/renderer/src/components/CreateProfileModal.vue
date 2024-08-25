@@ -7,7 +7,13 @@
       </v-card-title>
 
       <v-card-subtitle>
-        <v-alert v-if="alert.visible" :type="alert.type" dismissible @input="closeAlert">
+        <v-alert
+          v-if="alert.visible"
+          class="ma-4"
+          :type="alert.type"
+          dismissible
+          @input="closeAlert"
+        >
           {{ alert.message }}
         </v-alert>
 
@@ -33,15 +39,15 @@
               ></v-text-field>
 
               <center>
-                <v-card-text>
-                  <span class="caption">(Optional) Customization</span>
-                </v-card-text>
+                <v-card-title>
+                  <v-icon class="mr-2">mdi-face-agent</v-icon> (Optional) User Agent Details
+                </v-card-title>
               </center>
 
               <v-select
                 v-model="selectedPlatform"
                 :items="platformOptions"
-                label="Select Platform"
+                label="Select Platform (optional)"
                 prepend-icon="mdi-monitor"
                 clearable
               ></v-select>
@@ -49,27 +55,35 @@
               <v-select
                 v-model="selectedBrowser"
                 :items="browserOptions"
-                label="Select Browser"
+                label="Select Browser (optional)"
                 prepend-icon="mdi-web"
                 clearable
               ></v-select>
 
               <center>
-                <v-btn text @click="generateRandomUserAgent" style="margin-bottom: 20px">
+                <v-btn text style="ma-4" @click="generateRandomUserAgent">
                   <v-icon class="mr-2">mdi-refresh</v-icon> Generate Random User Agent
                 </v-btn>
               </center>
-
+              <center>
+                <v-card-title>
+                  <v-icon class="mr-2">mdi-face-agent</v-icon> (Optional) Proxy Settings
+                </v-card-title>
+              </center>
               <v-select
                 v-model="selectedProxy"
-                label="Select Proxy"
+                label="Select Proxy from List (optional)"
                 :items="proxyItems"
                 item-title="title"
                 prepend-icon="mdi-shield-lock"
                 @update:model-value="selectfunc"
               ></v-select>
 
-              <v-text-field v-model="proxy" label="Proxy (optional)" prepend-icon="mdi-shield" />
+              <v-text-field
+                v-model="proxy"
+                label="protocol://username:password@ip:port"
+                prepend-icon="mdi-shield"
+              />
 
               <center>
                 <v-btn text :disabled="loading" @click="testProxyConnection">
