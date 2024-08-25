@@ -6,7 +6,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 puppeteer.use(StealthPlugin())
 
 export async function loadProfiles() {
-  console.log('Loading profiles')
+  console.log('Loading profiles...')
   const profilesDir = path.join(__dirname, 'profiles')
   const profiles: Profile[] = []
 
@@ -21,18 +21,20 @@ export async function loadProfiles() {
       }
     })
   }
+  console.log('Profiles loaded:', profiles)
 
   return profiles
 }
 
 export async function launchProfile(name: string) {
+  console.log('Launching profile:', name)
   const profilesDir = path.join(__dirname, 'profiles')
   const profilePath = path.join(profilesDir, name, 'profile.json')
 
   if (fs.existsSync(profilePath)) {
     const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-    console.log('Launching profile:', profile)
-    console.log('Proxy:', profile.proxy)
+    console.dir('Profile data:', profile)
+    console.log('Proxy used:', profile.proxy)
 
     const browserArgs: string[] = []
     let proxyUsername: string = ''
@@ -78,7 +80,6 @@ export async function launchProfile(name: string) {
 export async function CreateProfile(profile) {
   console.log('Creating profile')
   const profilesDir = path.join(__dirname, 'profiles')
-  console.log(profilesDir)
   console.log('Profile data: ', profile)
   if (!fs.existsSync(profilesDir)) {
     fs.mkdirSync(profilesDir)
@@ -93,7 +94,8 @@ export async function CreateProfile(profile) {
     name: profile.name,
     useragent: profile.useragent,
     notes: profile.notes,
-    proxy: profile.proxy
+    proxy: profile.proxy,
+    proxyId: profile.proxyId
   }
   console.log('Profile path:', profilePath)
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
@@ -114,9 +116,10 @@ export async function UpdateProfile(profileData, oldProfileName) {
     name: profileData.name,
     useragent: profileData.useragent,
     notes: profileData.notes,
-    proxy: profileData.proxy
+    proxy: profileData.proxy,
+    proxyId: profileData.proxyId
   }
-
+  console.log('New profile data:', jsonProfile)
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
 }
 

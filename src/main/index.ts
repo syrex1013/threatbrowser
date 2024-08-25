@@ -18,7 +18,8 @@ import {
   DeleteProxy,
   GetProxies,
   editProxy,
-  getProxyCountry
+  getProxyCountry,
+  parseProxyCreate
 } from './proxyService'
 
 puppeteer.use(StealthPlugin())
@@ -129,6 +130,11 @@ app.whenReady().then(() => {
   // get proxy country
   ipcMain.handle('get-proxy-country', async (_, proxy) => {
     return await getProxyCountry(proxy)
+  })
+
+  // parse proxy
+  ipcMain.handle('parse-proxy-create', async (_, proxy) => {
+    return await parseProxyCreate(proxy)
   })
 
   createWindow()

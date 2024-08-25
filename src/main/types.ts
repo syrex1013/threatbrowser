@@ -3,6 +3,7 @@ export interface Profile {
   useragent: string
   notes: string
   proxy: string
+  proxyId?: number
 }
 
 export interface ProxyData {

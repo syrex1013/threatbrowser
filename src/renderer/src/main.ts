@@ -16,7 +16,6 @@ import router from './router/router'
 //store
 
 import { createStore } from 'vuex'
-import { c } from 'vite/dist/node/types.d-aGj9QkWt'
 
 const store = createStore({
   state() {
@@ -54,6 +53,11 @@ const store = createStore({
     createProxy(state, proxy) {
       window.electron.ipcRenderer.invoke('create-proxy', proxy)
       state.proxies.push(proxy)
+    },
+    parseProxyCreate(state, proxy) {
+      window.electron.ipcRenderer.invoke('parse-proxy-create', proxy).then((parsedProxy) => {
+        state.proxies.push(parsedProxy)
+      })
     }
   }
 })

@@ -250,7 +250,6 @@ async function addProxies() {
   for (const proxy of manualProxies) {
     if (proxy) {
       store.commit('createProxy', proxy)
-      //proxies.value.push(proxy)
     }
   }
   proxies.value = store.state.proxies

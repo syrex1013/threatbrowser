@@ -10,10 +10,16 @@
         </v-chip>
       </template>
       <template #item.proxy="{ item }">
-        <v-icon color="teal">{{
-          item.proxy === 'Proxy 1' ? 'mdi-shield-check' : 'mdi-shield-off'
-        }}</v-icon>
-        {{ item.proxy }}
+        <v-chip :color="getStatusColor(getProxyStatus(item.proxyId))" dark>
+          <v-icon left>{{
+            getProxyStatus(item.proxyId) === 'Working'
+              ? 'mdi-shield-check'
+              : getProxyStatus(item.proxyId) === 'Not Working'
+                ? 'mdi-shield-off'
+                : 'mdi-help-circle'
+          }}</v-icon>
+          {{ getProxyName(item.proxyId) }}
+        </v-chip>
       </template>
       <template #item.notes="{ item }">
         <v-textarea
@@ -28,15 +34,12 @@
         <div class="action-buttons">
           <v-btn color="green" small @click="launchProfile(item)">
             <v-icon left>mdi-play-circle</v-icon>
-            Launch
           </v-btn>
           <v-btn color="blue" small @click="editProfile(item)">
             <v-icon left>mdi-pencil</v-icon>
-            Edit
           </v-btn>
           <v-btn color="red" small @click="deleteProfile(item)">
             <v-icon left>mdi-delete</v-icon>
-            Delete
           </v-btn>
         </div>
       </template>
@@ -73,6 +76,7 @@ const headers = [
 
 const store = useStore()
 const profiles = computed(() => store.state.profiles)
+const proxies = computed(() => store.state.proxies)
 const isEditModalVisible = ref(false)
 const editingProfile = ref(null)
 const oldProfileName = ref('')
@@ -109,6 +113,27 @@ function updateNote(profile) {
     name: profile.name,
     notes: profile.notes
   })
+}
+
+function getStatusColor(status) {
+  switch (status) {
+    case 'Working':
+      return 'green'
+    case 'Not Working':
+      return 'red'
+    default:
+      return 'grey'
+  }
+}
+
+function getProxyStatus(proxyId) {
+  const proxy = proxies.value.find((p) => p.id === proxyId)
+  return proxy ? proxy.status : 'Unknown'
+}
+
+function getProxyName(proxyId) {
+  const proxy = proxies.value.find((p) => p.id === proxyId)
+  return proxy ? proxy.name : 'Unknown'
 }
 </script>
 

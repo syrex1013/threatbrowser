@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed, nextTick } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useStore } from 'vuex'
 import randomUseragent from 'random-useragent'
 
@@ -86,7 +86,8 @@ const proxyItems = computed(() => {
   if (store.state.proxies) {
     return store.state.proxies.map((proxy) => ({
       title: proxy.name,
-      value: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
+      value: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`,
+      id: proxy.id
     }))
   }
   return []
@@ -94,10 +95,17 @@ const proxyItems = computed(() => {
 console.log('Proxy Items:', proxyItems.value)
 const selectedProxy = ref(null)
 
-function selectfunc(selectedItem) {
-  //disable manual input if a proxy is selected
+function selectfunc(selectedValue) {
+  console.log('Selected Value:', selectedValue)
+
+  // Find the selected item from proxyItems
+  const selectedItem = proxyItems.value.find((item) => item.value === selectedValue)
+
   if (selectedItem) {
-    proxy.value = selectedItem
+    console.log('Selected Proxy ID:', selectedItem.id) // Print the ID
+    proxy.value = selectedItem.value // Update proxy value
+  } else {
+    console.log('No matching item found.')
   }
 }
 watch(
@@ -165,12 +173,24 @@ async function submit() {
       }
       return
     }
-
+    let proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
+    if (!proxyId && proxy.value) {
+      console.log('Creating new proxy:', proxy.value)
+      window.electron.ipcRenderer.invoke('parse-proxy-create', proxy.value).then((response) => {
+        console.log('Proxy created:', response)
+        proxyId = response.id
+        store.commit('fetchProxies') // Fetch proxies again
+        console.log('Proxy ID:', proxyId) // Log the updated proxyId
+      })
+    } else {
+      console.log('Proxy ID:', proxyId) // Log the existing proxyId
+    }
     const profileData = {
       name: name.value,
       useragent: useragent.value,
       notes: notes.value,
-      proxy: proxy.value
+      proxy: proxy.value,
+      proxyId: proxyId
     }
 
     if (props.profile) {
