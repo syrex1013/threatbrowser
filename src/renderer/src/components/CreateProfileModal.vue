@@ -1,46 +1,118 @@
 <template>
-  <v-dialog :model-value="isVisibleModal" max-width="500px" @update:model-value="updateModal">
+  <v-dialog :model-value="isVisibleModal" max-width="1200px" @update:model-value="updateModal">
     <v-card>
       <v-card-title>
+        <v-icon class="mr-2">mdi-account</v-icon>
         <span class="headline">{{ profile ? 'Edit Profile' : 'Create New Profile' }}</span>
       </v-card-title>
 
       <v-card-subtitle>
-        <v-alert v-if="alert.visible" :type="alert.type" dismissible @input="alert.visible = false">
+        <v-alert v-if="alert.visible" :type="alert.type" dismissible @input="closeAlert">
           {{ alert.message }}
         </v-alert>
 
-        <v-form ref="form" v-model="valid" lazy-validation>
-          <v-text-field v-model="name" :rules="[rules.required]" label="Profile Name" required />
-          <v-text-field v-model="useragent" :rules="[rules.required]" label="User Agent" required />
-          <v-btn text @click="generateRandomUserAgent">Generate Random User Agent</v-btn>
-          <v-text-field v-model="notes" label="Notes" />
-          <v-select
-            v-model="selectedProxy"
-            label="Select Proxy"
-            :items="proxyItems"
-            item-title="title"
-            @update:model-value="selectfunc"
-          >
-          </v-select>
-          <v-text-field v-model="proxy" label="Proxy (optional)" />
-          <v-btn text :disabled="loading" @click="testProxyConnection">
-            Test Proxy Connection
-            <v-progress-circular
-              v-if="loading"
-              indeterminate
-              color="primary"
-              size="20"
-              class="ml-2"
-            />
-          </v-btn>
-        </v-form>
+        <v-row>
+          <v-col cols="8">
+            <v-form ref="form" v-model="valid" lazy-validation>
+              <v-text-field
+                v-model="name"
+                :rules="[rules.required]"
+                label="Profile Name"
+                required
+                prepend-icon="mdi-rename"
+              ></v-text-field>
+
+              <v-text-field v-model="notes" label="Notes" prepend-icon="mdi-note"></v-text-field>
+
+              <v-text-field
+                v-model="useragent"
+                :rules="[rules.required]"
+                label="User Agent"
+                required
+                prepend-icon="mdi-face-agent"
+              ></v-text-field>
+
+              <center>
+                <v-card-text>
+                  <span class="caption">(Optional) Customization</span>
+                </v-card-text>
+              </center>
+
+              <v-select
+                v-model="selectedPlatform"
+                :items="platformOptions"
+                label="Select Platform"
+                prepend-icon="mdi-monitor"
+                clearable
+              ></v-select>
+
+              <v-select
+                v-model="selectedBrowser"
+                :items="browserOptions"
+                label="Select Browser"
+                prepend-icon="mdi-web"
+                clearable
+              ></v-select>
+
+              <center>
+                <v-btn text @click="generateRandomUserAgent" style="margin-bottom: 20px">
+                  <v-icon class="mr-2">mdi-refresh</v-icon> Generate Random User Agent
+                </v-btn>
+              </center>
+
+              <v-select
+                v-model="selectedProxy"
+                label="Select Proxy"
+                :items="proxyItems"
+                item-title="title"
+                prepend-icon="mdi-shield-lock"
+                @update:model-value="selectfunc"
+              ></v-select>
+
+              <v-text-field v-model="proxy" label="Proxy (optional)" prepend-icon="mdi-shield" />
+
+              <center>
+                <v-btn text :disabled="loading" @click="testProxyConnection">
+                  <v-icon class="mr-2">mdi-wifi</v-icon> Test Proxy Connection
+                  <v-progress-circular
+                    v-if="loading"
+                    indeterminate
+                    color="primary"
+                    size="20"
+                    class="ml-2"
+                  />
+                </v-btn>
+              </center>
+            </v-form>
+          </v-col>
+
+          <v-col cols="4">
+            <v-card>
+              <v-card-title>
+                <v-icon class="mr-2">mdi-information</v-icon> User Agent Details
+              </v-card-title>
+
+              <v-card-text>
+                <p><strong>Platform:</strong> {{ userAgentDetails.platform }}</p>
+                <p><strong>Vendor:</strong> {{ userAgentDetails.vendor }}</p>
+                <p><strong>Device:</strong> {{ userAgentDetails.device }}</p>
+                <p><strong>Browser:</strong> {{ userAgentDetails.browser }}</p>
+                <p><strong>User Agent String:</strong> {{ useragent }}</p>
+                <p><strong>Operating System:</strong> {{ userAgentDetails.os }}</p>
+                <p><strong>Browser Version:</strong> {{ userAgentDetails.browserVersion }}</p>
+                <p><strong>Device Type:</strong> {{ userAgentDetails.deviceType }}</p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
       </v-card-subtitle>
 
       <v-card-actions>
         <v-spacer />
-        <v-btn text @click="close">Cancel</v-btn>
-        <v-btn color="primary" @click="submit">{{ profile ? 'Save' : 'Create' }}</v-btn>
+        <v-btn text @click="close"> <v-icon class="mr-2">mdi-close</v-icon> Cancel </v-btn>
+        <v-btn color="primary" @click="submit">
+          <v-icon class="mr-2">mdi-check</v-icon> {{ profile ? 'Save' : 'Create' }}
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -50,6 +122,7 @@
 import { ref, watch, computed } from 'vue'
 import { useStore } from 'vuex'
 import UserAgent from 'user-agents'
+import { UAParser } from 'ua-parser-js'
 
 const props = defineProps({
   isVisibleModal: {
@@ -79,9 +152,18 @@ const alert = ref({
 })
 const loading = ref(false)
 const store = useStore()
+
 const rules = {
   required: (value) => !!value || 'Required.'
 }
+
+// Dropdown options for platform, device category, and browser
+const platformOptions = ['Windows', 'Macintosh', 'Linux', 'iOS', 'Android']
+const browserOptions = ['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera']
+
+const selectedPlatform = ref('')
+const selectedBrowser = ref('')
+
 const proxyItems = computed(() => {
   if (store.state.proxies) {
     return store.state.proxies.map((proxy) => ({
@@ -92,22 +174,26 @@ const proxyItems = computed(() => {
   }
   return []
 })
-console.log('Proxy Items:', proxyItems.value)
+
 const selectedProxy = ref(null)
 
+const userAgentDetails = ref({
+  platform: '',
+  vendor: '',
+  device: '',
+  browser: '',
+  os: '',
+  browserVersion: '',
+  deviceType: ''
+})
+
 function selectfunc(selectedValue) {
-  console.log('Selected Value:', selectedValue)
-
-  // Find the selected item from proxyItems
   const selectedItem = proxyItems.value.find((item) => item.value === selectedValue)
-
   if (selectedItem) {
-    console.log('Selected Proxy ID:', selectedItem.id) // Print the ID
-    proxy.value = selectedItem.value // Update proxy value
-  } else {
-    console.log('No matching item found.')
+    proxy.value = selectedItem.value
   }
 }
+
 watch(
   () => props.profile,
   (newProfile) => {
@@ -120,7 +206,7 @@ watch(
       resetFields()
     }
   },
-  { immediate: true } // Ensures watch is triggered on initial load
+  { immediate: true }
 )
 
 watch(
@@ -131,6 +217,7 @@ watch(
     }
   }
 )
+
 function updateModal(value) {
   emit('update:model-value', value)
 }
@@ -139,14 +226,79 @@ function close() {
   emit('update:model-value', false)
 }
 
+function closeAlert() {
+  alert.value.visible = false
+}
+
 function validateProxy(proxy) {
   const regex = /^(http|https|socks4|socks5):\/\/(.+)$/
   return regex.test(proxy)
 }
 
-function generateRandomUserAgent() {
-  const userAgent = new UserAgent()
-  useragent.value = userAgent.toString()
+async function generateRandomUserAgent() {
+  try {
+    let regexString = ''
+
+    // Build regex based on selected options
+    if (selectedPlatform.value) {
+      regexString += `(?=.*${selectedPlatform.value})`
+    }
+    if (selectedBrowser.value) {
+      regexString += `(?=.*${selectedBrowser.value})`
+    }
+
+    let userAgent
+
+    if (regexString) {
+      // Wrap the regex pattern to match the entire string
+      regexString = `^${regexString}.*$`
+
+      console.log('Generated Regex:', regexString)
+
+      // Convert the regexString to a RegExp object
+      const userAgentRegex = new RegExp(regexString)
+
+      // Pass the RegExp object to the UserAgent constructor
+      userAgent = new UserAgent(userAgentRegex)
+
+      // Check if no user agent matches the criteria
+      if (!userAgent.userAgent) {
+        alert.value = {
+          visible: true,
+          message: 'No matching user agents found. Please adjust your criteria.',
+          type: 'error'
+        }
+        setTimeout(closeAlert, 5000)
+        return
+      }
+    } else {
+      // No specific options selected, generate a random user agent without regex
+      userAgent = new UserAgent()
+    }
+
+    // Set the user agent value
+    useragent.value = userAgent.toString()
+
+    // Update user agent details
+    const parser = new UAParser(userAgent.toString())
+    const parsed = parser.getResult()
+    userAgentDetails.value = {
+      platform: userAgent.platform,
+      vendor: userAgent.vendor,
+      device: userAgent.deviceCategory,
+      browser: userAgent.userAgent.split(' ').slice(-1)[0],
+      os: parsed.os.name,
+      browserVersion: parsed.browser.version,
+      deviceType: parsed.device.type
+    }
+  } catch (error) {
+    alert.value = {
+      visible: true,
+      message: `Failed to generate user agent: ${error.message}`,
+      type: 'error'
+    }
+    setTimeout(closeAlert, 5000)
+  }
 }
 
 function resetAlert() {
@@ -172,19 +324,15 @@ async function submit() {
         message: 'Invalid proxy format. Please enter a valid proxy.',
         type: 'error'
       }
+      setTimeout(closeAlert, 5000)
       return
     }
     let proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
     if (!proxyId && proxy.value) {
-      console.log('Creating new proxy:', proxy.value)
       window.electron.ipcRenderer.invoke('parse-proxy-create', proxy.value).then((response) => {
-        console.log('Proxy created:', response)
         proxyId = response.id
-        store.commit('fetchProxies') // Fetch proxies again
-        console.log('Proxy ID:', proxyId) // Log the updated proxyId
+        store.commit('fetchProxies')
       })
-    } else {
-      console.log('Proxy ID:', proxyId) // Log the existing proxyId
     }
     const profileData = {
       name: name.value,
@@ -195,13 +343,11 @@ async function submit() {
     }
 
     if (props.profile) {
-      // Handle profile update logic
       window.electron.ipcRenderer.send('update-profile', {
         profileData,
         oldProfileName: props.oldProfileName
       })
     } else {
-      // Handle profile creation logic
       window.electron.ipcRenderer.send('create-profile', profileData)
     }
 
@@ -231,12 +377,14 @@ async function testProxyConnection() {
     } finally {
       loading.value = false
     }
+    setTimeout(closeAlert, 5000)
   } else {
     alert.value = {
       visible: true,
       message: 'Invalid proxy format. Please enter a valid proxy.',
       type: 'error'
     }
+    setTimeout(closeAlert, 5000)
   }
 }
 </script>
