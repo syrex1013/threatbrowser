@@ -14,5 +14,9 @@
         "src/renderer/src/*"
       ]
     }
-  }
+  },
+  "files": [
+    "src/main/types.ts",
+  ]
+
 }

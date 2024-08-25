@@ -7,14 +7,19 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import path from 'path'
 import fs from 'fs'
 import axios from 'axios'
+import https from 'https'
+import { Profile } from './types'
+import {
+  loadProfiles,
+  launchProfile,
+  CreateProfile,
+  UpdateProfile,
+  UpdateNote,
+  DeleteProfile
+} from './profileService'
+import { testProxy, CreateProxy, DeleteProxy, GetProxies, editProxy } from './proxyService'
 
 puppeteer.use(StealthPlugin())
-interface Profile {
-  name: string
-  useragent: string
-  notes: string
-  proxy: string
-}
 
 function createWindow(): void {
   // Create the browser window.
@@ -63,101 +68,58 @@ app.whenReady().then(() => {
   })
 
   // Launch Profile
-  ipcMain.on('launch-profile', async (_, args) => {
-    console.log('Launching profile:', args)
-    launchProfile(args) // Assuming args is an object and name is the key
+  ipcMain.on('launch-profile', async (_, profileName) => {
+    launchProfile(profileName)
   })
 
   // Load profiles
   ipcMain.handle('load-profiles', async () => {
-    console.log('Loading profiles')
-    const profilesDir = path.join(__dirname, 'profiles')
-    const profiles: Profile[] = []
-
-    if (fs.existsSync(profilesDir)) {
-      const profileDirs = fs.readdirSync(profilesDir)
-
-      profileDirs.forEach((dir) => {
-        const profilePath = path.join(profilesDir, dir, 'profile.json')
-        if (fs.existsSync(profilePath)) {
-          const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-          profiles.push(profile)
-        }
-      })
-    }
-
-    return profiles
+    return loadProfiles()
   })
 
   // Create Profile
   ipcMain.on('create-profile', async (_, profile) => {
-    console.log('Creating profile')
-    const profilesDir = path.join(__dirname, 'profiles')
-    console.log(profilesDir)
-    console.log('Profile data: ', profile)
-    if (!fs.existsSync(profilesDir)) {
-      fs.mkdirSync(profilesDir)
-    }
-    const profileDir = path.join(profilesDir, profile.name)
-    if (!fs.existsSync(profileDir)) {
-      fs.mkdirSync(profileDir)
-    }
-
-    const profilePath = path.join(profileDir, 'profile.json')
-    const jsonProfile: Profile = {
-      name: profile.name,
-      useragent: profile.useragent,
-      notes: profile.notes,
-      proxy: profile.proxy
-    }
-
-    fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
+    CreateProfile(profile)
   })
 
   // update-profile
   ipcMain.on('update-profile', async (_, { profileData, oldProfileName }) => {
-    console.log('Updating profile')
-    const profilesDir = path.join(__dirname, 'profiles')
-    const oldProfileDir = path.join(profilesDir, oldProfileName)
-    const newProfileDir = path.join(profilesDir, profileData.name)
-    const profilePath = path.join(newProfileDir, 'profile.json')
-
-    if (oldProfileName !== profileData.name && fs.existsSync(oldProfileDir)) {
-      fs.renameSync(oldProfileDir, newProfileDir)
-    }
-
-    const jsonProfile: Profile = {
-      name: profileData.name,
-      useragent: profileData.useragent,
-      notes: profileData.notes,
-      proxy: profileData.proxy
-    }
-
-    fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
+    UpdateProfile(profileData, oldProfileName)
   })
 
   //update-note
   ipcMain.on('update-note', async (_, { data }) => {
-    console.log('Updating note')
-    const profilesDir = path.join(__dirname, 'profiles')
-    const profileDir = path.join(profilesDir, data.name)
-    const profilePath = path.join(profileDir, 'profile.json')
-
-    const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-    profile.notes = data.note
-
-    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2))
+    UpdateNote(data)
   })
 
-  ipcMain.on('delete-profile', (event, profileName: string) => {
-    const profileDir = path.join(__dirname, 'profiles', profileName)
+  // delete profile
+  ipcMain.on('delete-profile', (_, profileName: string) => {
+    DeleteProfile(profileName)
+  })
 
-    if (fs.existsSync(profileDir)) {
-      fs.rmSync(profileDir, { recursive: true, force: true })
-      event.reply('profile-deleted', { success: true })
-    } else {
-      event.reply('profile-deleted', { success: false, message: 'Profile not found' })
-    }
+  // create proxy
+  ipcMain.handle('create-proxy', async (_, proxy) => {
+    await CreateProxy(proxy)
+  })
+
+  // delete proxy
+  ipcMain.handle('delete-proxy', async (_, proxyid) => {
+    await DeleteProxy(proxyid)
+  })
+
+  // get proxies
+  ipcMain.handle('get-proxies', async () => {
+    return GetProxies()
+  })
+
+  // test proxy
+  ipcMain.handle('test-proxy', async (_, proxy) => {
+    return await testProxy(proxy)
+  })
+
+  // edit proxy
+  ipcMain.handle('edit-proxy', async (_, proxyID, proxy) => {
+    return await editProxy(proxyID, proxy)
   })
 
   createWindow()
@@ -180,48 +142,3 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
-ipcMain.handle('test-proxy', async (_, proxy: string) => {
-  try {
-    const response = await axios.get('https://api.ipify.org', {
-      proxy: {
-        host: proxy.split('://')[1].split(':')[0],
-        port: parseInt(proxy.split('://')[1].split(':')[1])
-      }
-    })
-    if (response.status === 200) {
-      return true
-    }
-    return false // Add return statement
-  } catch (error) {
-    console.error(error)
-    return false
-  }
-})
-
-async function launchProfile(name: string) {
-  const profilesDir = path.join(__dirname, 'profiles')
-  const profilePath = path.join(profilesDir, name, 'profile.json')
-
-  if (fs.existsSync(profilePath)) {
-    const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-
-    const browser = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null,
-      args: [...(profile.proxy ? [`--proxy-server=${profile.proxy}`] : [])],
-      userDataDir: path.join(profilesDir, name)
-    })
-
-    const page = await browser.newPage()
-
-    if (profile.useragent) {
-      await page.setUserAgent(profile.useragent)
-    }
-    //on close
-    browser.on('disconnected', () => {
-      console.log('Browser closed')
-    })
-  } else {
-    console.error('Profile not found')
-  }
-}

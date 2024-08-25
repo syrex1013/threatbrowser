@@ -9,7 +9,7 @@
           rows="6"
           outlined
           color="primary"
-          hint="Enter proxies in the format: type://address"
+          hint="Enter proxies in the format: type://username:password@host:port"
         ></v-textarea>
       </v-col>
       <v-col cols="12" md="6">
@@ -48,19 +48,22 @@
     <v-data-table
       :headers="headers"
       :items="proxies"
-      class="elevation-1"
-      item-value="address"
+      class="elevation-1 proxy-table"
+      item-value="host"
       dense
-      hide-default-header
       :items-per-page="5"
     >
-      <template #column.type="{ column }">
+      <template #column.protocol="{ column }">
         <v-chip color="teal" dark>{{ column.value.toUpperCase() }}</v-chip>
       </template>
       <template #item.actions="{ item }">
         <v-btn color="success" small @click="checkProxy(item)" class="mr-2">
           <v-icon left>mdi-check-network</v-icon>
           Check
+        </v-btn>
+        <v-btn color="primary" small @click="openEditProxyModal(item)" class="mr-2">
+          <v-icon left>mdi-pencil</v-icon>
+          Edit
         </v-btn>
         <v-btn color="error" small @click="deleteProxy(item)">
           <v-icon left>mdi-delete</v-icon>
@@ -71,24 +74,75 @@
         <v-chip :color="getStatusColor(item.status)" dark>{{ item.status }}</v-chip>
       </template>
     </v-data-table>
+
+    <!-- Edit Proxy Modal -->
+    <v-dialog v-model="editModal" max-width="600px">
+      <v-card>
+        <v-card-title>Edit Proxy</v-card-title>
+        <v-card-text>
+          <v-form ref="editForm">
+            <v-text-field
+              v-model="editProxyData.protocol"
+              label="Proxy Type"
+              disabled
+            ></v-text-field>
+            <v-text-field
+              v-model="editProxyData.host"
+              label="Proxy Address"
+              required
+            ></v-text-field>
+            <v-text-field
+              v-model="editProxyData.port"
+              label="Port"
+              type="number"
+              required
+            ></v-text-field>
+            <v-text-field v-model="editProxyData.username" label="Username"></v-text-field>
+            <v-text-field
+              v-model="editProxyData.password"
+              label="Password"
+              type="password"
+            ></v-text-field>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="saveProxyEdit">Save</v-btn>
+          <v-btn text @click="editModal = false">Cancel</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { ProxyData } from '../../../main/types'
 
 // Data setup
 const proxyInput = ref('')
 const proxyFile = ref<File | null>(null)
-const proxies = ref<Array<{ type: string; address: string; status: string }>>([])
+const proxies = ref<Array<ProxyData>>([])
+
+// Modal states and edit proxy data
+const editModal = ref(false)
+const editProxyData = ref<ProxyData | null>(null)
+
+// Load proxies when the component is mounted
+onMounted(async () => {
+  proxies.value = await window.electron.ipcRenderer.invoke('get-proxies')
+})
 
 // Loading state
 const loading = ref(false)
 
 // Headers for the data table
 const headers = [
-  { title: 'Proxy Type', value: 'type' },
-  { title: 'Proxy Address', value: 'address' },
+  { title: 'Proxy Type', value: 'protocol' },
+  { title: 'Proxy Address', value: 'host' },
+  { title: 'Port', value: 'port' },
+  { title: 'Username', value: 'username' },
+  { title: 'Password', value: 'password' },
   { title: 'Status', value: 'status' },
   { title: 'Actions', value: 'actions', sortable: false }
 ]
@@ -100,52 +154,62 @@ function handleFileUpload() {
   reader.onload = (event) => {
     const fileContent = event.target?.result as string
     const fileProxies = fileContent.split('\n').map((line) => parseProxy(line.trim()))
-    proxies.value.push(
-      ...(fileProxies.filter((proxy) => proxy !== null) as Array<{
-        type: string
-        address: string
-        status: string
-      }>)
-    )
+    proxies.value.push(...(fileProxies.filter((proxy) => proxy !== null) as Array<ProxyData>))
   }
   reader.readAsText(proxyFile.value)
 }
 
 // Function to add proxies from textarea input
-function addProxies() {
+async function addProxies() {
   const manualProxies = proxyInput.value.split('\n').map((line) => parseProxy(line.trim()))
-  proxies.value.push(
-    ...(manualProxies.filter((proxy) => proxy !== null) as Array<{
-      type: string
-      address: string
-      status: string
-    }>)
-  )
+
+  for (const proxy of manualProxies) {
+    if (proxy) {
+      await window.electron.ipcRenderer.invoke('create-proxy', proxy)
+      proxies.value.push(proxy)
+    }
+  }
+
   proxyInput.value = ''
 }
 
 // Function to parse proxy input
-function parseProxy(proxy: string) {
-  const regex = /^(http|https|socks4|socks5):\/\/(.+)$/
+function parseProxy(proxy: string): ProxyData | null {
+  const regex = /^(http|https|socks4|socks5):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/
   const match = proxy.match(regex)
   if (match) {
-    return { type: match[1], address: match[2], status: 'Unchecked' }
+    return {
+      protocol: match[1],
+      username: match[2],
+      password: match[3],
+      host: match[4],
+      port: parseInt(match[5], 10),
+      status: 'Unchecked',
+      id: Date.now() // Generate a unique ID for the proxy
+    }
   }
   return null
 }
 
-// Function to check proxy status
-async function checkProxy(proxy: { type: string; address: string; status: string }) {
+// Function to check proxy status and save it
+async function checkProxy(proxy: ProxyData) {
   console.log('Checking proxy:', proxy)
   proxy.status = 'Checking...'
   try {
     const result = await window.electron.ipcRenderer.invoke(
       'test-proxy',
-      `${proxy.type}://${proxy.address}`
+      `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
     )
     proxy.status = result ? 'Working' : 'Not Working'
+
+    // Create a deep copy of the proxy to avoid serialization issues
+    const proxyCopy = JSON.parse(JSON.stringify(proxy))
+    await window.electron.ipcRenderer.invoke('edit-proxy', proxyCopy.id, proxyCopy)
   } catch (error) {
     proxy.status = 'Not Working'
+    // Create a deep copy of the proxy to avoid serialization issues
+    const proxyCopy = JSON.parse(JSON.stringify(proxy))
+    await window.electron.ipcRenderer.invoke('edit-proxy', proxyCopy.id, proxyCopy) // Save the failed status
   }
 }
 
@@ -159,8 +223,29 @@ async function checkAllProxies() {
 }
 
 // Function to delete a proxy
-function deleteProxy(proxy: { type: string; address: string; status: string }) {
+async function deleteProxy(proxy: ProxyData) {
+  console.log('Deleting proxy:', proxy.id)
+  await window.electron.ipcRenderer.invoke('delete-proxy', proxy.id)
   proxies.value = proxies.value.filter((p) => p !== proxy)
+}
+
+// Function to open the edit proxy modal
+function openEditProxyModal(proxy: ProxyData) {
+  editProxyData.value = { ...proxy } // Clone the proxy data
+  editModal.value = true
+}
+
+// Function to save the edited proxy
+async function saveProxyEdit() {
+  if (editProxyData.value) {
+    const updatedProxy = { ...editProxyData.value, status: 'Unchecked' } // Reset status to Unchecked
+    await window.electron.ipcRenderer.invoke('edit-proxy', updatedProxy.id, updatedProxy)
+    const index = proxies.value.findIndex((p) => p.id === updatedProxy.id)
+    if (index !== -1) {
+      proxies.value[index] = updatedProxy
+    }
+    editModal.value = false
+  }
 }
 
 // Function to get status color
@@ -179,20 +264,36 @@ function getStatusColor(status: string) {
 </script>
 
 <style scoped>
-.v-btn {
-  font-weight: 500;
-}
-
-.v-data-table {
+/* Table styling */
+.proxy-table {
   border-radius: 8px;
+  overflow: hidden;
 }
 
-.v-chip {
-  text-transform: uppercase;
+.proxy-table .v-data-table-header th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+  text-align: left;
 }
 
-.mx-2 {
-  margin-left: 8px;
-  margin-right: 8px;
+.proxy-table .v-data-table__wrapper {
+  background-color: #ffffff;
+}
+
+.proxy-table .v-data-table-header th,
+.proxy-table .v-data-table__wrapper td {
+  padding: 12px;
+}
+
+.proxy-table .v-data-table__wrapper tr:hover {
+  background-color: #f1f1f1;
+}
+
+.proxy-table .v-data-table__wrapper td {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.proxy-table .v-chip {
+  margin: 0;
 }
 </style>
