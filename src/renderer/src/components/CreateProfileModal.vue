@@ -15,6 +15,14 @@
           <v-text-field v-model="useragent" :rules="[rules.required]" label="User Agent" required />
           <v-btn text @click="generateRandomUserAgent">Generate Random User Agent</v-btn>
           <v-text-field v-model="notes" label="Notes" />
+          <v-select
+            v-model="selectedProxy"
+            label="Select Proxy"
+            :items="proxyItems"
+            item-title="title"
+            @update:model-value="selectfunc"
+          >
+          </v-select>
           <v-text-field v-model="proxy" label="Proxy (optional)" />
           <v-btn text :disabled="loading" @click="testProxyConnection">
             Test Proxy Connection
@@ -39,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch, computed, nextTick } from 'vue'
 import { useStore } from 'vuex'
 import randomUseragent from 'random-useragent'
 
@@ -71,11 +79,27 @@ const alert = ref({
 })
 const loading = ref(false)
 const store = useStore()
-
 const rules = {
   required: (value) => !!value || 'Required.'
 }
+const proxyItems = computed(() => {
+  if (store.state.proxies) {
+    return store.state.proxies.map((proxy) => ({
+      title: proxy.name,
+      value: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
+    }))
+  }
+  return []
+})
+console.log('Proxy Items:', proxyItems.value)
+const selectedProxy = ref(null)
 
+function selectfunc(selectedItem) {
+  //disable manual input if a proxy is selected
+  if (selectedItem) {
+    proxy.value = selectedItem
+  }
+}
 watch(
   () => props.profile,
   (newProfile) => {
@@ -99,7 +123,6 @@ watch(
     }
   }
 )
-
 function updateModal(value) {
   emit('update:model-value', value)
 }

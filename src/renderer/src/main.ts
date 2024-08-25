@@ -16,11 +16,13 @@ import router from './router/router'
 //store
 
 import { createStore } from 'vuex'
+import { c } from 'vite/dist/node/types.d-aGj9QkWt'
 
 const store = createStore({
   state() {
     return {
-      profiles: []
+      profiles: [],
+      proxies: []
     }
   },
   mutations: {
@@ -39,6 +41,19 @@ const store = createStore({
           profile.launched = !profile.launched
         }
       })
+    },
+    fetchProxies(state) {
+      window.electron.ipcRenderer.invoke('get-proxies').then((loadedProxies) => {
+        state.proxies = loadedProxies
+      })
+    },
+    deleteProxy(state, proxyID) {
+      window.electron.ipcRenderer.invoke('delete-proxy', proxyID)
+      state.proxies = state.proxies.filter((proxy) => proxy.id !== proxyID)
+    },
+    createProxy(state, proxy) {
+      window.electron.ipcRenderer.invoke('create-proxy', proxy)
+      state.proxies.push(proxy)
     }
   }
 })

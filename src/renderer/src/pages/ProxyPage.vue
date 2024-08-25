@@ -192,6 +192,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
 import { ProxyData } from '../../../main/types'
+import { useStore } from 'vuex'
 
 // Data setup
 const proxyInput = ref('')
@@ -204,11 +205,14 @@ const editProxyData = ref<ProxyData | null>(null)
 
 // Load proxies when the component is mounted
 onMounted(async () => {
-  proxies.value = await window.electron.ipcRenderer.invoke('get-proxies')
+  proxies.value = store.state.proxies
 })
 
 // Loading state
 const loading = ref(false)
+
+// store
+const store = useStore()
 
 // Headers for the data table
 const headers = [
@@ -245,11 +249,11 @@ async function addProxies() {
 
   for (const proxy of manualProxies) {
     if (proxy) {
-      await window.electron.ipcRenderer.invoke('create-proxy', proxy)
-      proxies.value.push(proxy)
+      store.commit('createProxy', proxy)
+      //proxies.value.push(proxy)
     }
   }
-
+  proxies.value = store.state.proxies
   proxyInput.value = ''
 }
 
@@ -324,7 +328,8 @@ async function checkAllProxies() {
 // Function to delete a proxy
 async function deleteProxy(proxy: ProxyData) {
   console.log('Deleting proxy:', proxy.id)
-  await window.electron.ipcRenderer.invoke('delete-proxy', proxy.id)
+  store.commit('deleteProxy', proxy.id)
+  //await window.electron.ipcRenderer.invoke('delete-proxy', proxy.id)
   proxies.value = proxies.value.filter((p) => p !== proxy)
 }
 

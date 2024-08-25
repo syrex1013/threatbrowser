@@ -102,7 +102,7 @@ export async function DeleteProxy(ProxyID) {
 }
 
 export async function GetProxies(): Promise<ProxyData[]> {
-  console.log('Getting proxies')
+  console.log('Getting proxies:')
   const proxiesDir = path.join(__dirname, 'proxies')
   if (!fs.existsSync(proxiesDir)) {
     return []
@@ -113,6 +113,7 @@ export async function GetProxies(): Promise<ProxyData[]> {
     const proxyData = fs.readFileSync(proxyPath)
     return JSON.parse(proxyData.toString())
   })
+  console.dir(proxies)
   return proxies
 }
 
