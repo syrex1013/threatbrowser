@@ -4,11 +4,6 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import path from 'path'
-import fs from 'fs'
-import axios from 'axios'
-import https from 'https'
-import { Profile } from './types'
 import {
   loadProfiles,
   launchProfile,
@@ -24,8 +19,10 @@ puppeteer.use(StealthPlugin())
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
+    width: 1200,
     height: 670,
+    minWidth: 1200,
+    minHeight: 670,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
