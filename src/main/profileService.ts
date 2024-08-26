@@ -76,7 +76,14 @@ export async function launchProfile(name: string) {
     if (profile.useragent) {
       await page.setUserAgent(profile.useragent)
     }
-    await page.goto('https://www.google.com')
+    try {
+      await page.goto('https://www.google.com')
+    } catch (error) {
+      logger.error(`[profileService] Error launching profile: ${error}`)
+      logger.info(`[profileService] Profile closed: ${name}`)
+      ChangeStatus(name)
+      ipcMain.emit('profile-closed', name)
+    }
 
     // Handle browser close event
     browser.on('disconnected', () => {
