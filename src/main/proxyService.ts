@@ -5,14 +5,16 @@ import { ProxyData } from './types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import logger from '../logger/logger'
 
+let datadir = __dirname
 if (!is.dev) {
-  const __dirname = app.getPath('userData')
-  console.log('User data:', __dirname)
+  datadir = app.getPath('userData')
 }
+logger.info(`[proxyService] Data directory: ${datadir}`)
 
 export async function testProxy(proxy: string) {
-  console.log('Testing proxy: ', proxy)
+  logger.info(`[proxyService] Testing proxy: ${proxy}`)
   try {
     const proxydata = await parseProxy(proxy)
 
@@ -25,42 +27,42 @@ export async function testProxy(proxy: string) {
       httpsAgent: agent // Adding custom agent with the proxy configuration
     })
 
-    console.log('Proxy Response:', response.data)
+    logger.info(`[proxyService] Proxy test response: ${response.status}`)
     return response.status === 200
   } catch (error) {
-    console.error('Proxy Error:', error)
+    logger.error(`[proxyService] Proxy test error: ${JSON.stringify(error)}`)
     return false
   }
 }
 
 export async function getProxyCountry(proxy: string) {
-  console.log('Getting proxy country: ', proxy)
+  logger.info(`[proxyService] Getting proxy country: ${proxy}`)
   try {
     const proxydata = await parseProxy(proxy)
     const response = await axios.get(`https://ipinfo.io/${proxydata.host}/json`)
     const data = response.data
-    console.log('Proxy Country:', data.country)
+    logger.info(`[proxyService] Proxy country: ${data.country}`)
     return data.country
   } catch (error) {
-    console.error('Proxy Error:', error)
+    logger.error(`[proxyService] Proxy country error: ${JSON.stringify(error)}`)
     return 'Unknown'
   }
 }
 export async function parseProxyCreate(proxy: string) {
-  console.log('Parsing proxy: ', proxy)
+  logger.info(`[proxyService] Parsing proxy and creating: ${proxy}`)
   const proxydata = await parseProxy(proxy)
   proxydata.name = `${proxydata.host}:${proxydata.port}`
-  console.log('New proxy name:', proxydata.name)
   CreateProxy(proxydata)
   return proxydata
 }
 export async function parseProxy(proxy: string): Promise<ProxyData> {
+  logger.info(`[proxyService] Parsing proxy internal: ${proxy}`)
   const [protocol, address] = proxy.split('://')
   const [credentials, hostAndPort] = address.split('@')
   const [username, password] = credentials.split(':')
   const [host, port] = hostAndPort.split(':')
 
-  return {
+  const proxyObject = {
     name: '',
     protocol,
     host,
@@ -71,11 +73,12 @@ export async function parseProxy(proxy: string): Promise<ProxyData> {
     status: 'UnChecked',
     country: 'Unknown'
   }
+  logger.info(`[proxyService] Parsed proxy: ${JSON.stringify(proxyObject)}`)
+  return proxyObject
 }
 export async function CreateProxy(ProxyData: ProxyData) {
-  console.log('Creating proxy')
-  const proxiesDir = path.join(__dirname, 'proxies')
-  console.log('Proxy data: ', ProxyData)
+  logger.info(`[proxyService] Creating proxy: ${JSON.stringify(ProxyData)}`)
+  const proxiesDir = path.join(datadir, 'proxies')
   if (!fs.existsSync(proxiesDir)) {
     fs.mkdirSync(proxiesDir)
   }
@@ -85,7 +88,6 @@ export async function CreateProxy(ProxyData: ProxyData) {
   }
 
   const proxyPath = path.join(proxyDir, 'proxy.json')
-  console.log('Proxy path:', proxyPath)
   const jsonProxy: ProxyData = {
     name: ProxyData.name,
     protocol: ProxyData.protocol,
@@ -102,8 +104,8 @@ export async function CreateProxy(ProxyData: ProxyData) {
 }
 
 export async function DeleteProxy(ProxyID) {
-  console.log('Deleting proxy: ', ProxyID)
-  const proxiesDir = path.join(__dirname, 'proxies')
+  logger.info(`[proxyService] Deleting proxy: ${ProxyID}`)
+  const proxiesDir = path.join(datadir, 'proxies')
   const proxyDir = path.join(proxiesDir, ProxyID.toString())
   const proxyPath = path.join(proxyDir, 'proxy.json')
 
@@ -116,9 +118,10 @@ export async function DeleteProxy(ProxyID) {
 }
 
 export async function GetProxies(): Promise<ProxyData[]> {
-  console.log('Getting proxies:')
-  const proxiesDir = path.join(__dirname, 'proxies')
+  logger.info(`[proxyService] Getting proxies`)
+  const proxiesDir = path.join(datadir, 'proxies')
   if (!fs.existsSync(proxiesDir)) {
+    logger.warn(`[proxyService] No proxies found`)
     return []
   }
   const proxyDirs = fs.readdirSync(proxiesDir)
@@ -127,13 +130,15 @@ export async function GetProxies(): Promise<ProxyData[]> {
     const proxyData = fs.readFileSync(proxyPath)
     return JSON.parse(proxyData.toString())
   })
-  console.dir(proxies)
+  logger.info(`[proxyService] Got proxies: ${JSON.stringify(proxies)}`)
   return proxies
 }
 
 export async function editProxy(ProxyID, ProxyData: ProxyData) {
-  console.log('Editing proxy')
-  const proxiesDir = path.join(__dirname, 'proxies')
+  logger.info(
+    `[proxyService] Editing proxy: ${ProxyID} with new data: ${JSON.stringify(ProxyData)}`
+  )
+  const proxiesDir = path.join(datadir, 'proxies')
   const proxyDir = path.join(proxiesDir, ProxyID.toString())
   const proxyPath = path.join(proxyDir, 'proxy.json')
 
@@ -149,7 +154,6 @@ export async function editProxy(ProxyID, ProxyData: ProxyData) {
       status: ProxyData.status,
       country: ProxyData.country
     }
-    console.log('New proxy data:', jsonProxy)
     fs.writeFileSync(proxyPath, JSON.stringify(jsonProxy))
   }
 }

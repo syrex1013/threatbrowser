@@ -1,35 +1,55 @@
 <template>
   <v-container fluid>
     <v-data-table :headers="headers" :items="profiles" class="elevation-1">
+      <!-- Profile Name Slot -->
+      <template #item.name="{ item }">
+        <div class="centered-content">
+          <v-chip>{{ item.name }}</v-chip>
+        </div>
+      </template>
+
+      <!-- Status Slot -->
       <template #item.status="{ item }">
-        <v-chip :color="item.launched ? 'green' : 'red'" dark>
-          <v-icon left>{{ item.launched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
-          {{ item.launched ? 'Launched' : 'Not Launched' }}
-        </v-chip>
+        <div class="centered-content">
+          <v-chip :color="item.launched ? 'green' : 'red'" dark>
+            <v-icon left>{{ item.launched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
+            {{ item.launched ? 'Launched' : 'Not Launched' }}
+          </v-chip>
+        </div>
       </template>
+
+      <!-- Proxy Slot -->
       <template #item.proxy="{ item }">
-        <v-chip :color="getStatusColor(getProxyStatus(item.proxyId))" dark>
-          <v-icon left>{{
-            getProxyStatus(item.proxyId) === 'Working'
-              ? 'mdi-shield-check'
-              : getProxyStatus(item.proxyId) === 'Not Working'
-                ? 'mdi-shield-off'
-                : 'mdi-help-circle'
-          }}</v-icon>
-          {{ getProxyName(item.proxyId) }}
-        </v-chip>
+        <div class="centered-content">
+          <v-chip :color="getStatusColor(getProxyStatus(item.proxyId))" dark>
+            <v-icon left>{{
+              getProxyStatus(item.proxyId) === 'Working'
+                ? 'mdi-shield-check'
+                : getProxyStatus(item.proxyId) === 'Not Working'
+                  ? 'mdi-shield-off'
+                  : 'mdi-help-circle'
+            }}</v-icon>
+            {{ getProxyName(item.proxyId) }}
+          </v-chip>
+        </div>
       </template>
+
+      <!-- Notes Slot -->
       <template #item.notes="{ item }">
-        <v-textarea
-          v-model="item.notes"
-          outlined
-          rows="2"
-          class="notes-textarea"
-          @change="updateNote(item)"
-        ></v-textarea>
+        <div class="centered-content">
+          <v-textarea
+            v-model="item.notes"
+            outlined
+            rows="2"
+            class="notes-textarea"
+            @change="updateNote(item)"
+          ></v-textarea>
+        </div>
       </template>
+
+      <!-- Actions Slot -->
       <template #item.actions="{ item }">
-        <div class="action-buttons">
+        <div class="centered-content action-buttons">
           <v-btn color="green" small @click="launchProfile(item)">
             <v-icon left>mdi-play-circle</v-icon>
           </v-btn>
@@ -42,6 +62,8 @@
         </div>
       </template>
     </v-data-table>
+
+    <!-- Modal -->
     <CreateProfileModal
       :is-visible-modal="isEditModalVisible"
       :profile="editingProfile"
@@ -55,8 +77,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import CreateProfileModal from '../components/CreateProfileModal.vue'
-import { webContents } from 'electron'
-
+import terminal from 'virtual:terminal'
+terminal.log('HomePage loaded')
 // Props to accept searchQuery from App.vue
 const props = defineProps({
   searchQuery: {
@@ -64,13 +86,12 @@ const props = defineProps({
     default: ''
   }
 })
-
 const headers = [
-  { title: 'Profile Name', value: 'name' },
-  { title: 'Status', value: 'status' },
-  { title: 'Proxy', value: 'proxy' },
-  { title: 'Notes', value: 'notes' },
-  { title: 'Actions', value: 'actions', sortable: false }
+  { title: 'Profile Name', value: 'name', align: 'center' },
+  { title: 'Status', value: 'status', align: 'center' },
+  { title: 'Proxy', value: 'proxy', align: 'center' },
+  { title: 'Notes', value: 'notes', align: 'center' },
+  { title: 'Actions', value: 'actions', sortable: false, align: 'center' }
 ]
 
 const store = useStore()
@@ -90,24 +111,25 @@ const filteredProfiles = computed(() => {
 })
 
 function launchProfile(profile) {
-  console.log('Launch button clicked', profile)
+  terminal.info(`[HomePage] Launching profile: ${profile.name}`)
   window.electron.ipcRenderer.send('launch-profile', profile.name)
   store.commit('setLaunchedProfile', profile.name)
 }
 
 function editProfile(profile) {
-  console.log('Edit Profile button clicked', profile)
+  terminal.info(`[HomePage] Editing profile: ${profile.name}`)
   editingProfile.value = { ...profile }
   oldProfileName.value = profile.name
   isEditModalVisible.value = true
 }
 
 function deleteProfile(profile) {
-  console.log('Delete Profile button clicked', profile)
+  terminal.info(`[HomePage] Deleting profile: ${profile.name}`)
   store.commit('deleteProfile', profile.name)
 }
 
 function updateNote(profile) {
+  terminal.info(`[HomePage] Updating notes for profile: ${profile.name}`)
   window.electron.ipcRenderer.send('update-note', {
     name: profile.name,
     notes: profile.notes
@@ -141,21 +163,30 @@ onMounted(() => {
 })
 
 window.electron.ipcRenderer.on('profile-closed', (event, profileName) => {
-  console.log('Profile closed home:', profileName)
+  terminal.info(`[HomePage] Profile closed received: ${profileName}`)
   store.commit('fetchProfiles')
 })
 </script>
 
 <style scoped>
+/* Center content in table cells */
+.centered-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* Ensure full height */
+  text-align: center;
+}
+
 /* Style for notes textarea */
 .notes-textarea {
   min-height: 50px;
   margin-top: 8px;
+  width: 100%; /* Make sure the textarea takes the full width */
 }
 
 /* Style for action buttons container */
 .action-buttons {
-  display: flex;
   gap: 8px;
 }
 </style>
