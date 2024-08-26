@@ -84,7 +84,10 @@ app.whenReady().then(() => {
   })
   ipcMain.addListener('profile-closed', function closelistener(arg1) {
     logger.info(`[electron-main] profile-closed: ${arg1}`)
-    BrowserWindow.getFocusedWindow().webContents.send('profile-closed', arg1)
+    const focusedWindow = BrowserWindow.getFocusedWindow()
+    if (focusedWindow) {
+      focusedWindow.webContents.send('profile-closed', arg1)
+    }
   })
   // Load profiles
   ipcMain.handle('load-profiles', async () => {

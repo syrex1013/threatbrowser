@@ -2,14 +2,14 @@
   <v-container fluid>
     <v-data-table :headers="headers" :items="profiles" class="elevation-1">
       <!-- Profile Name Slot -->
-      <template #item.name="{ item }">
+      <template #[`item.name`]="{ item }">
         <div class="centered-content">
           <v-chip>{{ item.name }}</v-chip>
         </div>
       </template>
 
       <!-- Status Slot -->
-      <template #item.status="{ item }">
+      <template #[`item.status`]="{ item }">
         <div class="centered-content">
           <v-chip :color="item.launched ? 'green' : 'red'" dark>
             <v-icon left>{{ item.launched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
@@ -19,7 +19,7 @@
       </template>
 
       <!-- Proxy Slot -->
-      <template #item.proxy="{ item }">
+      <template #[`item.proxy`]="{ item }">
         <div class="centered-content">
           <v-chip :color="getStatusColor(getProxyStatus(item.proxyId))" dark>
             <v-icon left>{{
@@ -35,7 +35,7 @@
       </template>
 
       <!-- Notes Slot -->
-      <template #item.notes="{ item }">
+      <template #[`item.notes`]="{ item }">
         <div class="centered-content">
           <v-textarea
             v-model="item.notes"
@@ -48,7 +48,7 @@
       </template>
 
       <!-- Actions Slot -->
-      <template #item.actions="{ item }">
+      <template #[`item.actions`]="{ item }">
         <div class="centered-content action-buttons">
           <v-btn color="green" small @click="launchProfile(item)">
             <v-icon left>mdi-play-circle</v-icon>
@@ -78,7 +78,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import CreateProfileModal from '../components/CreateProfileModal.vue'
 import logger from '../logger/logger'
-logger.debug('HomePage loaded')
+import { Profile, ProxyData } from '../types/types'
+
 // Props to accept searchQuery from App.vue
 const props = defineProps({
   searchQuery: {
@@ -86,6 +87,7 @@ const props = defineProps({
     default: ''
   }
 })
+
 const headers = [
   { title: 'Profile Name', value: 'name', align: 'center' },
   { title: 'Status', value: 'status', align: 'center' },
@@ -95,42 +97,42 @@ const headers = [
 ]
 
 const store = useStore()
-const profiles = computed(() => store.state.profiles)
-const proxies = computed(() => store.state.proxies)
+const profiles = computed<Profile[]>(() => store.state.profiles as Profile[])
+const proxies = computed<ProxyData[]>(() => store.state.proxies as ProxyData[])
+
 const isEditModalVisible = ref(false)
-const editingProfile = ref(null)
+const editingProfile = ref<Profile | null>(null)
 const oldProfileName = ref('')
 
 // Computed property to filter profiles based on searchQuery
-const filteredProfiles = computed(() => {
+const filteredProfiles = computed<Profile[]>(() => {
   if (!props.searchQuery) return profiles.value
-  console.log('Filtered Profiles:', filteredProfiles)
   return profiles.value.filter((profile) =>
     profile.name.toLowerCase().includes(props.searchQuery.toLowerCase())
   )
 })
 
-function launchProfile(profile) {
-  logger.debug(`Launching profile`)
+function launchProfile(profile: Profile): void {
+  logger.debug('Launching profile')
   logger.info(`[HomePage] Launching profile: ${profile.name}`)
   window.electron.ipcRenderer.send('launch-profile', profile.name)
   store.commit('setLaunchedProfile', profile.name)
 }
 
-function editProfile(profile) {
-  logger.debug(`Editing profile`)
+function editProfile(profile: Profile): void {
+  logger.debug('Editing profile')
   logger.info(`[HomePage] Editing profile: ${profile.name}`)
   editingProfile.value = { ...profile }
   oldProfileName.value = profile.name
   isEditModalVisible.value = true
 }
 
-function deleteProfile(profile) {
+function deleteProfile(profile: Profile): void {
   logger.info(`[HomePage] Deleting profile: ${profile.name}`)
   store.commit('deleteProfile', profile.name)
 }
 
-function updateNote(profile) {
+function updateNote(profile: Profile): void {
   logger.info(`[HomePage] Updating notes for profile: ${profile.name}`)
   window.electron.ipcRenderer.send('update-note', {
     name: profile.name,
@@ -138,7 +140,7 @@ function updateNote(profile) {
   })
 }
 
-function getStatusColor(status) {
+function getStatusColor(status: string): string {
   switch (status) {
     case 'Working':
       return 'green'
@@ -149,13 +151,12 @@ function getStatusColor(status) {
   }
 }
 
-function getProxyStatus(proxyId) {
+function getProxyStatus(proxyId?: number): string {
   const proxy = proxies.value.find((p) => p.id === proxyId)
   return proxy ? proxy.status : 'Unknown'
 }
 
-function getProxyName(proxyId) {
-  console.log('Proxy ID:', proxyId)
+function getProxyName(proxyId?: number): string {
   const proxy = proxies.value.find((p) => p.id === proxyId)
   return proxy ? proxy.name : 'Unknown'
 }
@@ -165,7 +166,7 @@ onMounted(() => {
   store.commit('fetchProxies')
 })
 
-window.electron.ipcRenderer.on('profile-closed', (_, profileName) => {
+window.electron.ipcRenderer.on('profile-closed', (_, profileName: string) => {
   logger.info(`[HomePage] Profile closed received: ${profileName}`)
   store.commit('fetchProfiles')
   logger.debug('Profile closed')

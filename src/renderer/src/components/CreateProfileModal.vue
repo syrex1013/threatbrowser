@@ -142,6 +142,7 @@ import { useStore } from 'vuex'
 import UserAgent from 'user-agents'
 import { UAParser } from 'ua-parser-js'
 import logger from '../logger/logger'
+
 const props = defineProps({
   isVisibleModal: {
     type: Boolean,
