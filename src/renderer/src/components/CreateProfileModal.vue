@@ -356,12 +356,14 @@ async function submit() {
     proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
     if (!proxyId && proxy.value) {
       logger.info(`[CreateProfileModal] Proxy not found. Creating new with data: ${proxy.value}`)
-      window.electron.ipcRenderer.invoke('parse-proxy-create', proxy.value).then((response) => {
-        proxyId = response.id
-        store.commit('fetchProxies')
-      })
+      proxyId = await window.electron.ipcRenderer
+        .invoke('parse-proxy-create', proxy.value)
+        .then((response) => {
+          proxyId = response.id
+          return proxyId
+        })
     }
-    proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
+    console.log(proxyId)
     logger.info(`[CreateProfileModal] Proxy ID: ${proxyId}`)
     const profileData = {
       name: name.value,
@@ -381,6 +383,7 @@ async function submit() {
     }
 
     store.commit('fetchProfiles')
+    store.commit('fetchProxies')
     close()
   }
 }
@@ -399,6 +402,7 @@ async function testProxyConnection() {
           : 'Proxy connection failed. Please check your proxy settings.',
         type: response ? 'success' : 'error'
       }
+      //edit proxy status
     } catch (error) {
       alert.value = {
         visible: true,

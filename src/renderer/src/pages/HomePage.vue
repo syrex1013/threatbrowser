@@ -155,6 +155,7 @@ function getProxyStatus(proxyId) {
 }
 
 function getProxyName(proxyId) {
+  console.log('Proxy ID:', proxyId)
   const proxy = proxies.value.find((p) => p.id === proxyId)
   return proxy ? proxy.name : 'Unknown'
 }
@@ -164,7 +165,7 @@ onMounted(() => {
   store.commit('fetchProxies')
 })
 
-window.electron.ipcRenderer.on('profile-closed', (event, profileName) => {
+window.electron.ipcRenderer.on('profile-closed', (_, profileName) => {
   logger.info(`[HomePage] Profile closed received: ${profileName}`)
   store.commit('fetchProfiles')
   logger.debug('Profile closed')

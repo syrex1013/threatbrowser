@@ -60,7 +60,7 @@ const store = createStore({
     fetchProxies(state) {
       logger.info(`[store] Fetching proxies`)
       window.electron.ipcRenderer
-        .invoke('get-proxies')
+        .invoke('get-proxies', '')
         .then((loadedProxies) => {
           state.proxies = loadedProxies
           logger.info(`[store] Proxies loaded: ${JSON.stringify(loadedProxies)}`)

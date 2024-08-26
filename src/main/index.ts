@@ -136,7 +136,8 @@ app.whenReady().then(() => {
   // get proxies
   ipcMain.handle('get-proxies', async () => {
     logger.info('[electron-main] get-proxies')
-    return GetProxies()
+    const proxies = await GetProxies()
+    return proxies
   })
 
   // test proxy

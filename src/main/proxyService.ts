@@ -48,11 +48,11 @@ export async function getProxyCountry(proxy: string) {
     return 'Unknown'
   }
 }
-export async function parseProxyCreate(proxy: string) {
+export async function parseProxyCreate(proxy: string): Promise<ProxyData> {
   logger.info(`[proxyService] Parsing proxy and creating: ${proxy}`)
   const proxydata = await parseProxy(proxy)
   proxydata.name = `${proxydata.host}:${proxydata.port}`
-  CreateProxy(proxydata)
+  await CreateProxy(proxydata)
   return proxydata
 }
 export async function parseProxy(proxy: string): Promise<ProxyData> {
