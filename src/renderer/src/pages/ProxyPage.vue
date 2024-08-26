@@ -109,9 +109,9 @@
                 ? 'mdi-web'
                 : item.protocol === 'https'
                   ? 'mdi-lock'
-                  : item.protocol === 'socks4' || item.protocol === 'socks5'
-                    ? 'mdi-socks'
-                    : 'mdi-help-circle'
+                  : item.protocol === 'SOCKS4' || item.protocol === 'SOCKS5'
+                    ? 'mdi-arrow-decision-auto'
+                    : 'mdi-arrow-decision'
             }}
           </v-icon>
           {{ item.protocol.toUpperCase() }}

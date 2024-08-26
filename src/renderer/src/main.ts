@@ -14,7 +14,6 @@ import { Profile, ProxyData } from '../../main/types'
 import router from './router/router'
 
 //store
-
 import { createStore } from 'vuex'
 
 const store = createStore({
@@ -34,7 +33,8 @@ const store = createStore({
       window.electron.ipcRenderer.send('delete-profile', profileName)
       state.profiles = state.profiles.filter((profile) => profile.name !== profileName)
     },
-    setLanchedProfile(state, profileName) {
+    setLaunchedProfile(state, profileName) {
+      window.electron.ipcRenderer.send('change-profile-status', profileName)
       state.profiles.forEach((profile) => {
         if (profile.name === profileName) {
           profile.launched = !profile.launched

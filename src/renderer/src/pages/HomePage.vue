@@ -1,12 +1,10 @@
 <template>
   <v-container fluid>
-    <v-data-table :headers="headers" :items="filteredProfiles" class="elevation-1">
+    <v-data-table :headers="headers" :items="profiles" class="elevation-1">
       <template #item.status="{ item }">
-        <v-chip color="primary" dark>
-          <v-icon left>{{
-            item.status === 'Active' ? 'mdi-check-circle' : 'mdi-close-circle'
-          }}</v-icon>
-          {{ item.status }}
+        <v-chip :color="item.launched ? 'green' : 'red'" dark>
+          <v-icon left>{{ item.launched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
+          {{ item.launched ? 'Launched' : 'Not Launched' }}
         </v-chip>
       </template>
       <template #item.proxy="{ item }">
@@ -57,6 +55,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import CreateProfileModal from '../components/CreateProfileModal.vue'
+import { webContents } from 'electron'
 
 // Props to accept searchQuery from App.vue
 const props = defineProps({
@@ -67,7 +66,7 @@ const props = defineProps({
 })
 
 const headers = [
-  { title: 'Name', value: 'name' },
+  { title: 'Profile Name', value: 'name' },
   { title: 'Status', value: 'status' },
   { title: 'Proxy', value: 'proxy' },
   { title: 'Notes', value: 'notes' },
@@ -84,6 +83,7 @@ const oldProfileName = ref('')
 // Computed property to filter profiles based on searchQuery
 const filteredProfiles = computed(() => {
   if (!props.searchQuery) return profiles.value
+  console.log('Filtered Profiles:', filteredProfiles)
   return profiles.value.filter((profile) =>
     profile.name.toLowerCase().includes(props.searchQuery.toLowerCase())
   )
@@ -92,7 +92,7 @@ const filteredProfiles = computed(() => {
 function launchProfile(profile) {
   console.log('Launch button clicked', profile)
   window.electron.ipcRenderer.send('launch-profile', profile.name)
-  store.commit('setLanchedProfile', profile.name)
+  store.commit('setLaunchedProfile', profile.name)
 }
 
 function editProfile(profile) {
@@ -138,6 +138,11 @@ function getProxyName(proxyId) {
 onMounted(() => {
   store.commit('fetchProfiles')
   store.commit('fetchProxies')
+})
+
+window.electron.ipcRenderer.on('profile-closed', (event, profileName) => {
+  console.log('Profile closed home:', profileName)
+  store.commit('fetchProfiles')
 })
 </script>
 

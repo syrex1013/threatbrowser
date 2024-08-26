@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, ipcRenderer } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -10,7 +10,8 @@ import {
   CreateProfile,
   UpdateProfile,
   UpdateNote,
-  DeleteProfile
+  DeleteProfile,
+  ChangeStatus
 } from './profileService'
 import {
   testProxy,
@@ -27,9 +28,9 @@ puppeteer.use(StealthPlugin())
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1400,
     height: 670,
-    minWidth: 1200,
+    minWidth: 1400,
     minHeight: 670,
     show: false,
     autoHideMenuBar: true,
@@ -78,7 +79,10 @@ app.whenReady().then(() => {
   ipcMain.on('launch-profile', async (_, profileName) => {
     launchProfile(profileName)
   })
-
+  ipcMain.addListener('profile-closed', function closelistener(arg1) {
+    console.log('Profile closed main:', arg1)
+    BrowserWindow.getFocusedWindow().webContents.send('profile-closed', arg1)
+  })
   // Load profiles
   ipcMain.handle('load-profiles', async () => {
     return loadProfiles()
@@ -98,10 +102,14 @@ app.whenReady().then(() => {
   ipcMain.on('update-note', async (_, data) => {
     UpdateNote(data)
   })
-
   // delete profile
   ipcMain.on('delete-profile', (_, profileName: string) => {
     DeleteProfile(profileName)
+  })
+
+  // change-profile-status
+  ipcMain.on('change-profile-status', (_, profileName: string) => {
+    ChangeStatus(profileName)
   })
 
   // create proxy

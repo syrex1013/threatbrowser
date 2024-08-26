@@ -3,7 +3,7 @@ import path from 'path'
 import { Profile } from './types'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import { app } from 'electron'
+import { app, ipcMain, ipcRenderer } from 'electron'
 import { is } from '@electron-toolkit/utils'
 
 if (!is.dev) {
@@ -12,6 +12,7 @@ if (!is.dev) {
 }
 
 puppeteer.use(StealthPlugin())
+
 export async function loadProfiles() {
   console.log('Loading profiles...')
   const profilesDir = path.join(__dirname, 'profiles')
@@ -75,9 +76,12 @@ export async function launchProfile(name: string) {
       await page.setUserAgent(profile.useragent)
     }
     await page.goto('https://www.google.com')
+
     // Handle browser close event
     browser.on('disconnected', () => {
-      console.log('Browser closed')
+      console.log('Browser closed for profile:', name)
+      ChangeStatus(name)
+      ipcMain.emit('profile-closed', name)
     })
   } else {
     console.error('Profile not found')
@@ -102,7 +106,8 @@ export async function CreateProfile(profile) {
     useragent: profile.useragent,
     notes: profile.notes,
     proxy: profile.proxy,
-    proxyId: profile.proxyId
+    proxyId: profile.proxyId,
+    launched: false
   }
   console.log('Profile path:', profilePath)
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
@@ -124,7 +129,8 @@ export async function UpdateProfile(profileData, oldProfileName) {
     useragent: profileData.useragent,
     notes: profileData.notes,
     proxy: profileData.proxy,
-    proxyId: profileData.proxyId
+    proxyId: profileData.proxyId,
+    launched: false
   }
   console.log('New profile data:', jsonProfile)
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
@@ -149,6 +155,21 @@ export async function DeleteProfile(profileName: string) {
   if (fs.existsSync(profileDir)) {
     fs.rmSync(profileDir, { recursive: true, force: true })
     console.log('Profile deleted:', profileName)
+  } else {
+    console.error('Profile not found:', profileName)
+  }
+}
+
+export async function ChangeStatus(profileName: string) {
+  console.log('Changing profile status:', profileName)
+  const profilesDir = path.join(__dirname, 'profiles')
+  const profilePath = path.join(profilesDir, profileName, 'profile.json')
+
+  if (fs.existsSync(profilePath)) {
+    const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
+    profile.launched = !profile.launched
+
+    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2))
   } else {
     console.error('Profile not found:', profileName)
   }
