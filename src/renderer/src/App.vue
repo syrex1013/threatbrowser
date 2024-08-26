@@ -46,14 +46,14 @@
 <script setup>
 import { ref } from 'vue'
 import CreateProfileModal from './components/CreateProfileModal.vue'
-import { terminal } from 'virtual:terminal'
-terminal.log('App.vue loaded')
+import logger from './logger/logger'
+logger.debug('App.vue loaded')
 const drawer = ref(false)
 const searchQuery = ref('')
 const isModalVisible = ref(false)
 function manageModal() {
   isModalVisible.value = !isModalVisible.value
-  terminal.log('CreateProfileModal.vue loaded')
+  logger.debug('CreateProfileModal loaded')
 }
 const items = [
   { title: 'Profiles', icon: 'mdi-account', route: '/' },

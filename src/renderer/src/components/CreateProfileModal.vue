@@ -141,7 +141,7 @@ import { ref, watch, computed } from 'vue'
 import { useStore } from 'vuex'
 import UserAgent from 'user-agents'
 import { UAParser } from 'ua-parser-js'
-import terminal from 'virtual:terminal'
+import logger from '../logger/logger'
 const props = defineProps({
   isVisibleModal: {
     type: Boolean,
@@ -208,7 +208,7 @@ const userAgentDetails = ref({
 function selectfunc(selectedValue) {
   const selectedItem = proxyItems.value.find((item) => item.value === selectedValue)
   if (selectedItem) {
-    terminal.info(`[CreateProfileModal] Selected Proxy: ${selectedItem.value}`)
+    logger.info(`[CreateProfileModal] Selected Proxy: ${selectedItem.value}`)
     proxy.value = selectedItem.value
   }
 }
@@ -242,7 +242,7 @@ function updateModal(value) {
 }
 
 function close() {
-  terminal.log('[CreateProfileModal] Closing modal')
+  logger.debug('Closing modal')
   emit('update:model-value', false)
 }
 
@@ -273,7 +273,7 @@ async function generateRandomUserAgent() {
       // Wrap the regex pattern to match the entire string
       regexString = `^${regexString}.*$`
 
-      terminal.info(`[CreateProfileModal] Generating user agent with regex: ${regexString}`)
+      logger.info(`[CreateProfileModal] Generating user agent with regex: ${regexString}`)
 
       // Convert the regexString to a RegExp object
       const userAgentRegex = new RegExp(regexString)
@@ -338,9 +338,9 @@ function resetFields() {
 
 async function submit() {
   if (props.profile) {
-    terminal.warn(`[CreateProfileModal] Updating profile: ${name.value}`)
+    logger.info(`[CreateProfileModal] Updating profile: ${name.value}`)
   } else {
-    terminal.warn(`[CreateProfileModal] Creating profile: ${name.value}`)
+    logger.info(`[CreateProfileModal] Creating profile: ${name.value}`)
   }
   if (valid.value) {
     if (proxy.value && !validateProxy(proxy.value)) {
@@ -355,14 +355,14 @@ async function submit() {
     let proxyId = null
     proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
     if (!proxyId && proxy.value) {
-      terminal.info(`[CreateProfileModal] Proxy not found. Creating new with data: ${proxy.value}`)
+      logger.info(`[CreateProfileModal] Proxy not found. Creating new with data: ${proxy.value}`)
       window.electron.ipcRenderer.invoke('parse-proxy-create', proxy.value).then((response) => {
         proxyId = response.id
         store.commit('fetchProxies')
       })
     }
     proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
-    terminal.info(`[CreateProfileModal] Proxy ID: ${proxyId}`)
+    logger.info(`[CreateProfileModal] Proxy ID: ${proxyId}`)
     const profileData = {
       name: name.value,
       useragent: useragent.value,
@@ -386,7 +386,7 @@ async function submit() {
 }
 
 async function testProxyConnection() {
-  terminal.info(`[CreateProfileModal] Testing proxy connection: ${proxy.value}`)
+  logger.info(`[CreateProfileModal] Testing proxy connection: ${proxy.value}`)
 
   if (proxy.value && validateProxy(proxy.value)) {
     loading.value = true

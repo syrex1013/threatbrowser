@@ -16,8 +16,8 @@ import router from './router/router'
 //store
 import { createStore } from 'vuex'
 
-// Plugin for logging browser to node console
-import terminal from 'virtual:terminal'
+// Custom logger to maintain order of logs from browser
+import logger from './logger/logger'
 
 const store = createStore({
   state() {
@@ -28,69 +28,69 @@ const store = createStore({
   },
   mutations: {
     fetchProfiles(state) {
-      terminal.info(`[store] Fetching profiles`)
+      logger.info(`[store] Fetching profiles`)
       window.electron.ipcRenderer
         .invoke('load-profiles', '')
         .then((loadedProfiles) => {
           state.profiles = loadedProfiles
-          terminal.info(`[store] Profiles loaded: ${JSON.stringify(loadedProfiles)}`)
+          logger.info(`[store] Profiles loaded: ${JSON.stringify(loadedProfiles)}`)
         })
         .catch((error) => {
-          terminal.error(`[store] Error loading profiles: ${error}`)
+          logger.error(`[store] Error loading profiles: ${error}`)
         })
     },
     deleteProfile(state, profileName) {
-      terminal.info(`[store] Deleting profile: ${profileName}`)
+      logger.info(`[store] Deleting profile: ${profileName}`)
       window.electron.ipcRenderer.send('delete-profile', profileName)
       state.profiles = state.profiles.filter((profile) => profile.name !== profileName)
-      terminal.info(`[store] Profile deleted: ${profileName}`)
+      logger.info(`[store] Profile deleted: ${profileName}`)
     },
     setLaunchedProfile(state, profileName) {
-      terminal.info(`[store] Setting launched profile: ${profileName}`)
+      logger.info(`[store] Setting launched profile: ${profileName}`)
       window.electron.ipcRenderer.send('change-profile-status', profileName)
       state.profiles.forEach((profile) => {
         if (profile.name === profileName) {
           profile.launched = !profile.launched
-          terminal.info(
+          logger.info(
             `[store] Profile status toggled: ${profileName} is now ${profile.launched ? 'launched' : 'not launched'}`
           )
         }
       })
     },
     fetchProxies(state) {
-      terminal.info(`[store] Fetching proxies`)
+      logger.info(`[store] Fetching proxies`)
       window.electron.ipcRenderer
         .invoke('get-proxies')
         .then((loadedProxies) => {
           state.proxies = loadedProxies
-          terminal.info(`[store] Proxies loaded: ${JSON.stringify(loadedProxies)}`)
+          logger.info(`[store] Proxies loaded: ${JSON.stringify(loadedProxies)}`)
         })
         .catch((error) => {
-          terminal.error(`[store] Error loading proxies: ${error}`)
+          logger.error(`[store] Error loading proxies: ${error}`)
         })
     },
     deleteProxy(state, proxyID) {
-      terminal.info(`[store] Deleting proxy: ${proxyID}`)
+      logger.info(`[store] Deleting proxy: ${proxyID}`)
       window.electron.ipcRenderer.invoke('delete-proxy', proxyID)
       state.proxies = state.proxies.filter((proxy) => proxy.id !== proxyID)
-      terminal.info(`[store] Proxy deleted: ${proxyID}`)
+      logger.info(`[store] Proxy deleted: ${proxyID}`)
     },
     createProxy(state, proxy) {
-      terminal.info(`[store] Creating proxy: ${JSON.stringify(proxy)}`)
+      logger.info(`[store] Creating proxy: ${JSON.stringify(proxy)}`)
       window.electron.ipcRenderer.invoke('create-proxy', proxy)
       state.proxies.push(proxy)
-      terminal.info(`[store] Proxy created: ${JSON.stringify(proxy)}`)
+      logger.info(`[store] Proxy created: ${JSON.stringify(proxy)}`)
     },
     parseProxyCreate(state, proxy) {
-      terminal.info(`[store] Parsing proxy and creating: ${JSON.stringify(proxy)}`)
+      logger.info(`[store] Parsing proxy and creating: ${JSON.stringify(proxy)}`)
       window.electron.ipcRenderer
         .invoke('parse-proxy-create', proxy)
         .then((parsedProxy) => {
           state.proxies.push(parsedProxy)
-          terminal.info(`[store] Parsed and created proxy: ${JSON.stringify(parsedProxy)}`)
+          logger.info(`[store] Parsed and created proxy: ${JSON.stringify(parsedProxy)}`)
         })
         .catch((error) => {
-          terminal.error(`[store] Error parsing and creating proxy: ${error}`)
+          logger.error(`[store] Error parsing and creating proxy: ${error}`)
         })
     }
   }

@@ -163,6 +163,20 @@ app.whenReady().then(() => {
     return await parseProxyCreate(proxy)
   })
 
+  // LOGGING USING IPC TO MAINTAIN ORDER
+
+  ipcMain.on('log-info', async (_, message) => {
+    logger.info(message)
+  })
+
+  ipcMain.on('log-error', async (_, message) => {
+    logger.error(message)
+  })
+
+  ipcMain.on('log-debug', async (_, message) => {
+    logger.debug(message)
+  })
+
   createWindow()
 
   app.on('activate', function () {

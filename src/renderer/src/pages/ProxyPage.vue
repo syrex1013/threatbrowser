@@ -193,8 +193,9 @@
 import { ref, onMounted } from 'vue'
 import { ProxyData } from '../../../main/types'
 import { useStore } from 'vuex'
-import terminal from 'virtual:terminal'
-terminal.log('ProxyPage.vue loaded')
+import logger from '../logger/logger'
+
+logger.debug('ProxyPage.vue loaded')
 // Data setup
 const proxyInput = ref('')
 const proxyFile = ref<File | null>(null)
@@ -246,7 +247,7 @@ function handleFileUpload() {
 
 // Function to add proxies from textarea input
 async function addProxies() {
-  terminal.info(`[ProxyPage] Adding proxies from input`)
+  logger.info(`[ProxyPage] Adding proxies from input`)
   const manualProxies = proxyInput.value.split('\n').map((line) => parseProxy(line.trim()))
 
   for (const proxy of manualProxies) {
@@ -260,7 +261,7 @@ async function addProxies() {
 
 // Function to parse proxy input
 function parseProxy(proxy: string): ProxyData | null {
-  terminal.info(`[ProxyPage] Parsing proxy: ${proxy}`)
+  logger.info(`[ProxyPage] Parsing proxy: ${proxy}`)
   const regex = /^(http|https|socks4|socks5):\/\/([^:]+):([^@]+)@([^:]+):(\d+)$/
   const match = proxy.match(regex)
   const name = generateProxyName()
@@ -294,7 +295,7 @@ function generateProxyName() {
 
 // Function to check proxy status and save it
 async function checkProxy(proxy: ProxyData) {
-  terminal.info(`[ProxyPage] Checking proxy: ${proxy.host}:${proxy.port}`)
+  logger.info(`[ProxyPage] Checking proxy: ${proxy.host}:${proxy.port}`)
   proxy.status = 'Checking...'
   try {
     const result = await window.electron.ipcRenderer.invoke(
@@ -320,7 +321,7 @@ async function checkProxy(proxy: ProxyData) {
 
 // Function to check all proxies
 async function checkAllProxies() {
-  terminal.info(`[ProxyPage] Checking all proxies`)
+  logger.info(`[ProxyPage] Checking all proxies`)
   loading.value = true
   for (const proxy of proxies.value) {
     await checkProxy(proxy)
@@ -330,7 +331,7 @@ async function checkAllProxies() {
 
 // Function to delete a proxy
 async function deleteProxy(proxy: ProxyData) {
-  terminal.info(`[ProxyPage] Deleting proxy: ${proxy.name} Proxy ID: ${proxy.id}`)
+  logger.info(`[ProxyPage] Deleting proxy: ${proxy.name} Proxy ID: ${proxy.id}`)
   store.commit('deleteProxy', proxy.id)
   //await window.electron.ipcRenderer.invoke('delete-proxy', proxy.id)
   proxies.value = proxies.value.filter((p) => p !== proxy)
@@ -338,14 +339,15 @@ async function deleteProxy(proxy: ProxyData) {
 
 // Function to open the edit proxy modal
 function openEditProxyModal(proxy: ProxyData) {
-  terminal.info(`[ProxyPage] Opening edit proxy modal for proxy: ${proxy.name}`)
+  logger.debug(`Openin proxy editor`)
+  logger.info(`[ProxyPage] Opening edit proxy modal for proxy: ${proxy.name}`)
   editProxyData.value = { ...proxy } // Clone the proxy data
   editModal.value = true
 }
 
 // Function to save the edited proxy
 async function saveProxyEdit() {
-  terminal.info(`[ProxyPage] Saving edited proxy: ${editProxyData.value?.name}`)
+  logger.info(`[ProxyPage] Saving edited proxy: ${editProxyData.value?.name}`)
   if (editProxyData.value) {
     const updatedProxy = { ...editProxyData.value, status: 'Unchecked' } // Reset status to Unchecked
     await window.electron.ipcRenderer.invoke('edit-proxy', updatedProxy.id, updatedProxy)
@@ -355,6 +357,7 @@ async function saveProxyEdit() {
     }
     editModal.value = false
   }
+  logger.debug(`Proxy saved`)
 }
 
 // Function to get status color

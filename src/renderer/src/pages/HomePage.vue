@@ -77,8 +77,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import CreateProfileModal from '../components/CreateProfileModal.vue'
-import terminal from 'virtual:terminal'
-terminal.log('HomePage loaded')
+import logger from '../logger/logger'
+logger.debug('HomePage loaded')
 // Props to accept searchQuery from App.vue
 const props = defineProps({
   searchQuery: {
@@ -111,25 +111,27 @@ const filteredProfiles = computed(() => {
 })
 
 function launchProfile(profile) {
-  terminal.info(`[HomePage] Launching profile: ${profile.name}`)
+  logger.debug(`Launching profile`)
+  logger.info(`[HomePage] Launching profile: ${profile.name}`)
   window.electron.ipcRenderer.send('launch-profile', profile.name)
   store.commit('setLaunchedProfile', profile.name)
 }
 
 function editProfile(profile) {
-  terminal.info(`[HomePage] Editing profile: ${profile.name}`)
+  logger.debug(`Editing profile`)
+  logger.info(`[HomePage] Editing profile: ${profile.name}`)
   editingProfile.value = { ...profile }
   oldProfileName.value = profile.name
   isEditModalVisible.value = true
 }
 
 function deleteProfile(profile) {
-  terminal.info(`[HomePage] Deleting profile: ${profile.name}`)
+  logger.info(`[HomePage] Deleting profile: ${profile.name}`)
   store.commit('deleteProfile', profile.name)
 }
 
 function updateNote(profile) {
-  terminal.info(`[HomePage] Updating notes for profile: ${profile.name}`)
+  logger.info(`[HomePage] Updating notes for profile: ${profile.name}`)
   window.electron.ipcRenderer.send('update-note', {
     name: profile.name,
     notes: profile.notes
@@ -163,8 +165,9 @@ onMounted(() => {
 })
 
 window.electron.ipcRenderer.on('profile-closed', (event, profileName) => {
-  terminal.info(`[HomePage] Profile closed received: ${profileName}`)
+  logger.info(`[HomePage] Profile closed received: ${profileName}`)
   store.commit('fetchProfiles')
+  logger.debug('Profile closed')
 })
 </script>
 

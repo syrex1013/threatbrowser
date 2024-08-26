@@ -6,7 +6,7 @@ const logDir = app.getPath('userData')
 const logFile = path.join(logDir, 'app.log')
 
 const logger = createLogger({
-  level: 'info',
+  level: 'debug',
   format: format.combine(
     format.colorize(), // Add colorization to the console output
     format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
