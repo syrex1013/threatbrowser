@@ -88,20 +88,21 @@ const props = defineProps({
   }
 })
 
-const headers = [
-  { title: 'Profile Name', value: 'name', align: 'center' },
-  { title: 'Status', value: 'status', align: 'center' },
-  { title: 'Proxy', value: 'proxy', align: 'center' },
-  { title: 'Notes', value: 'notes', align: 'center' },
-  { title: 'Actions', value: 'actions', sortable: false, align: 'center' }
-]
+// Define headers with the correct type
+const headers = ref([
+  { text: 'Profile Name', value: 'name', align: 'center' },
+  { text: 'Status', value: 'status', align: 'center' },
+  { text: 'Proxy', value: 'proxy', align: 'center' },
+  { text: 'Notes', value: 'notes', align: 'center' },
+  { text: 'Actions', value: 'actions', sortable: false, align: 'center' }
+] as const)
 
 const store = useStore()
 const profiles = computed<Profile[]>(() => store.state.profiles as Profile[])
 const proxies = computed<ProxyData[]>(() => store.state.proxies as ProxyData[])
 
 const isEditModalVisible = ref(false)
-const editingProfile = ref<Profile | null>(null)
+const editingProfile = ref<Profile>()
 const oldProfileName = ref('')
 
 // Computed property to filter profiles based on searchQuery
@@ -111,6 +112,7 @@ const filteredProfiles = computed<Profile[]>(() => {
     profile.name.toLowerCase().includes(props.searchQuery.toLowerCase())
   )
 })
+logger.info(`[HomePage] Profiles: ${filteredProfiles.value}`)
 
 function launchProfile(profile: Profile): void {
   logger.debug('Launching profile')
@@ -172,26 +174,3 @@ window.electron.ipcRenderer.on('profile-closed', (_, profileName: string) => {
   logger.debug('Profile closed')
 })
 </script>
-
-<style scoped>
-/* Center content in table cells */
-.centered-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%; /* Ensure full height */
-  text-align: center;
-}
-
-/* Style for notes textarea */
-.notes-textarea {
-  min-height: 50px;
-  margin-top: 8px;
-  width: 100%; /* Make sure the textarea takes the full width */
-}
-
-/* Style for action buttons container */
-.action-buttons {
-  gap: 8px;
-}
-</style>

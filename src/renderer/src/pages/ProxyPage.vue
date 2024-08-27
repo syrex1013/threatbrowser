@@ -23,14 +23,12 @@
         ></v-file-input>
       </v-col>
     </v-row>
-
     <!-- Action Buttons -->
     <v-row class="mb-4" justify="center">
       <v-btn color="primary" class="mx-2" @click="addProxies">
         <v-icon left>mdi-plus-circle</v-icon>
         Add Proxies
       </v-btn>
-
       <v-btn color="secondary" :disabled="loading" class="mx-2" @click="checkAllProxies">
         <v-icon left>mdi-check-network-outline</v-icon>
         Check All Proxies
@@ -43,7 +41,6 @@
         ></v-progress-circular>
       </v-btn>
     </v-row>
-
     <!-- Data Table -->
     <v-data-table
       :headers="headers"
@@ -52,7 +49,7 @@
       item-value="host"
       :items-per-page="5"
     >
-      <template #item.country="{ item }">
+      <template #[`item.country`]="{ item }">
         <v-chip v-if="item.country !== 'Unknown'" color="primary" dark>
           <v-icon left>
             <img
@@ -64,44 +61,7 @@
         </v-chip>
         <template v-else> Unknown </template>
       </template>
-      <!-- Add icons to headers -->
-      <template #column.protocol="{ column }">
-        <span class="d-flex align-center">
-          <v-icon>mdi-network</v-icon>
-          <span class="ml-2">{{ column.text }}</span>
-        </span>
-      </template>
-
-      <template #item.username="{ item }">
-        <span class="d-flex align-center">
-          <v-icon>mdi-account</v-icon>
-          <span class="ml-2">{{ wrapText(item.username, 20) }}</span>
-        </span>
-      </template>
-
-      <template #item.password="{ item }">
-        <span class="d-flex align-center">
-          <v-icon>mdi-lock</v-icon>
-          <span class="ml-2">{{ wrapText(item.password, 20) }}</span>
-        </span>
-      </template>
-
-      <template #column.port="{ column }">
-        <span class="d-flex align-center">
-          <v-icon>mdi-port-network</v-icon>
-          <span class="ml-2">{{ column.text }}</span>
-        </span>
-      </template>
-
-      <template #column.status="{ column }">
-        <span class="d-flex align-center">
-          <v-icon>mdi-status</v-icon>
-          <span class="ml-2">{{ column.text }}</span>
-        </span>
-      </template>
-
-      <!-- Display data with color-coded items -->
-      <template #item.protocol="{ item }">
+      <template #[`item.protocol`]="{ item }">
         <v-chip color="teal" dark>
           <v-icon left>
             {{
@@ -117,7 +77,7 @@
           {{ item.protocol.toUpperCase() }}
         </v-chip>
       </template>
-      <template #item.status="{ item }">
+      <template #[`item.status`]="{ item }">
         <v-chip :color="getStatusColor(item.status)" dark>
           <v-icon left>
             {{
@@ -133,7 +93,25 @@
           {{ item.status }}
         </v-chip>
       </template>
-      <template #item.actions="{ item }">
+      <template #[`item.username`]="{ item }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-account</v-icon>
+          <span class="ml-2">{{ wrapText(item.username, 20) }}</span>
+        </span>
+      </template>
+      <template #[`item.password`]="{ item }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-lock</v-icon>
+          <span class="ml-2">{{ wrapText(item.password, 20) }}</span>
+        </span>
+      </template>
+      <template #[`item.port`]="{ item }">
+        <span class="d-flex align-center">
+          <v-icon>mdi-port-network</v-icon>
+          <span class="ml-2">{{ item.port }}</span>
+        </span>
+      </template>
+      <template #[`item.actions`]="{ item }">
         <div class="action-buttons">
           <v-btn color="success" small class="mr-2" @click="checkProxy(item)">
             <v-icon left>mdi-check-network</v-icon>
@@ -147,13 +125,12 @@
         </div>
       </template>
     </v-data-table>
-
     <!-- Edit Proxy Modal -->
     <v-dialog v-model="editModal" max-width="600px">
       <v-card>
         <v-card-title>Edit Proxy</v-card-title>
         <v-card-text>
-          <v-form ref="editForm">
+          <v-form v-if="editProxyData" ref="editForm">
             <v-text-field v-model="editProxyData.name" label="Name" required></v-text-field>
             <v-text-field
               v-model="editProxyData.protocol"
@@ -182,7 +159,7 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="primary" @click="saveProxyEdit">Save</v-btn>
-          <v-btn text @click="editModal = false">Cancel</v-btn>
+          <v-btn @click="editModal = false">Cancel</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -191,7 +168,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
-import { ProxyData } from '../../../main/types'
+import { ProxyData } from '../types/types'
 import { useStore } from 'vuex'
 import logger from '../logger/logger'
 
@@ -203,7 +180,7 @@ const proxies = ref<Array<ProxyData>>([])
 
 // Modal states and edit proxy data
 const editModal = ref(false)
-const editProxyData = ref<ProxyData | null>(null)
+const editProxyData = ref<ProxyData>()
 
 // Load proxies when the component is mounted
 onMounted(async () => {

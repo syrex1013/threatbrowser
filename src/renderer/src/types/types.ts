@@ -17,4 +17,5 @@ export interface ProxyData {
   id: number
   status: string
   country: string
+  proxyId?: number
 }
