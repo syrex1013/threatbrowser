@@ -126,43 +126,11 @@
       </template>
     </v-data-table>
     <!-- Edit Proxy Modal -->
-    <v-dialog v-model="editModal" max-width="600px">
-      <v-card>
-        <v-card-title>Edit Proxy</v-card-title>
-        <v-card-text>
-          <v-form v-if="editProxyData" ref="editForm">
-            <v-text-field v-model="editProxyData.name" label="Name" required></v-text-field>
-            <v-text-field
-              v-model="editProxyData.protocol"
-              label="Proxy Type"
-              disabled
-            ></v-text-field>
-            <v-text-field
-              v-model="editProxyData.host"
-              label="Proxy Address"
-              required
-            ></v-text-field>
-            <v-text-field
-              v-model="editProxyData.port"
-              label="Port"
-              type="number"
-              required
-            ></v-text-field>
-            <v-text-field v-model="editProxyData.username" label="Username"></v-text-field>
-            <v-text-field
-              v-model="editProxyData.password"
-              label="Password"
-              type="password"
-            ></v-text-field>
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" @click="saveProxyEdit">Save</v-btn>
-          <v-btn @click="editModal = false">Cancel</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <EditProxyModal
+      :edit-modal="editModal"
+      :edit-proxy-data="editProxyData"
+      @save-proxy-edit="handleSaveProxyEdit"
+    ></EditProxyModal>
   </v-container>
 </template>
 
@@ -171,6 +139,7 @@ import { ref, onMounted } from 'vue'
 import { ProxyData } from '../types/types'
 import { useStore } from 'vuex'
 import logger from '../logger/logger'
+import EditProxyModal from '@renderer/components/EditProxyModal.vue'
 
 logger.debug('ProxyPage.vue loaded')
 // Data setup
@@ -322,19 +291,15 @@ function openEditProxyModal(proxy: ProxyData) {
   editModal.value = true
 }
 
-// Function to save the edited proxy
-async function saveProxyEdit() {
-  logger.info(`[ProxyPage] Saving edited proxy: ${editProxyData.value?.name}`)
-  if (editProxyData.value) {
-    const updatedProxy = { ...editProxyData.value, status: 'Unchecked' } // Reset status to Unchecked
-    await window.electron.ipcRenderer.invoke('edit-proxy', updatedProxy.id, updatedProxy)
-    const index = proxies.value.findIndex((p) => p.id === updatedProxy.id)
-    if (index !== -1) {
-      proxies.value[index] = updatedProxy
-    }
-    editModal.value = false
+// handleProxyEdit
+function handleSaveProxyEdit(updatedProxy: ProxyData) {
+  logger.info(`[ProxyPage] Saving edited proxy: ${updatedProxy.name}`)
+  const index = proxies.value.findIndex((p) => p.id === updatedProxy.id)
+  if (index !== -1) {
+    proxies.value[index] = updatedProxy
   }
-  logger.debug(`Proxy saved`)
+  editModal.value = false
+  logger.debug(`[ProxyPage] Proxy updated: ${updatedProxy.name}`)
 }
 
 // Function to get status color
