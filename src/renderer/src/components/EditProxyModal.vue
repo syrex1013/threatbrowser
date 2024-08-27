@@ -40,18 +40,26 @@
 
 <script setup lang="ts">
 import { defineProps, defineEmits, ref, watch } from 'vue'
+import { useStore } from 'vuex'
 import { ProxyData } from '../types/types'
 
+// Vuex store
+const store = useStore()
+
+// Props
 const props = defineProps({
   editModal: Boolean,
   editProxyData: Object as () => ProxyData | null
 })
 
+// Emits
 const emit = defineEmits(['save-proxy-edit', 'update:editModal'])
 
+// Local state
 const modalVisible = ref(props.editModal)
 const localEditProxyData = ref<ProxyData | null>(null)
 
+// Watch for prop changes and sync with local state
 watch(
   () => props.editModal,
   (newVal) => {
@@ -67,17 +75,23 @@ watch(
   { immediate: true }
 )
 
+// Watch modal visibility to update parent component
 watch(modalVisible, (newVal) => {
   emit('update:editModal', newVal)
 })
 
+// Close modal
 const closeModal = () => {
   modalVisible.value = false
 }
 
+// Save proxy edits
 const saveProxyEdit = () => {
   if (localEditProxyData.value) {
-    emit('save-proxy-edit', localEditProxyData.value)
+    // Dispatch to store, deepclone
+    const deepclone: ProxyData = JSON.parse(JSON.stringify(localEditProxyData.value))
+    store.dispatch('editProxy', deepclone)
+    emit('save-proxy-edit', deepclone)
     closeModal()
   }
 }

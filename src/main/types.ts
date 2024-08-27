@@ -1,4 +1,5 @@
 export interface Profile {
+  id: number
   name: string
   useragent: string
   notes: string
@@ -17,4 +18,5 @@ export interface ProxyData {
   id: number
   status: string
   country: string
+  proxyId?: number
 }

@@ -8,10 +8,8 @@ import {
   loadProfiles,
   launchProfile,
   CreateProfile,
-  UpdateProfile,
-  UpdateNote,
-  DeleteProfile,
-  ChangeStatus
+  editProfile,
+  DeleteProfile
 } from './profileService'
 import {
   testProxy,
@@ -19,11 +17,11 @@ import {
   DeleteProxy,
   GetProxies,
   editProxy,
-  getProxyCountry,
-  parseProxyCreate
+  getProxyCountry
 } from './proxyService'
 
 import logger from '../logger/logger'
+import { Profile, ProxyData } from './types'
 
 puppeteer.use(StealthPlugin())
 
@@ -78,9 +76,9 @@ app.whenReady().then(() => {
   })
 
   // Launch Profile
-  ipcMain.on('launch-profile', async (_, profileName) => {
-    logger.info(`[electron-main] launch-profile: ${profileName}`)
-    launchProfile(profileName)
+  ipcMain.handle('launch-profile', async (_, profile: Profile) => {
+    logger.info(`[electron-main] launch-profile: ${profile.id}`)
+    return await launchProfile(profile)
   })
   ipcMain.addListener('profile-closed', function closelistener(arg1) {
     logger.info(`[electron-main] profile-closed: ${arg1}`)
@@ -92,79 +90,62 @@ app.whenReady().then(() => {
   // Load profiles
   ipcMain.handle('load-profiles', async () => {
     logger.info('[electron-main] load-profiles')
-    return loadProfiles()
+    return await loadProfiles()
   })
 
   // Create Profile
-  ipcMain.on('create-profile', async (_, profile) => {
+  ipcMain.handle('create-profile', async (_, profile: Profile) => {
     logger.info(`[electron-main] create-profile: ${JSON.stringify(profile)}`)
-    CreateProfile(profile)
+    return await CreateProfile(profile)
   })
 
-  // update-profile
-  ipcMain.on('update-profile', async (_, { profileData, oldProfileName }) => {
-    logger.info(`[electron-main] update-profile: ${JSON.stringify(profileData)}`)
-    UpdateProfile(profileData, oldProfileName)
+  // edit-profile
+  ipcMain.handle('edit-profile', async (_, profile: Profile) => {
+    logger.info(`[electron-main] update-profile: ${JSON.stringify(profile)}`)
+    return await editProfile(profile)
   })
 
-  //update-note
-  ipcMain.on('update-note', async (_, data) => {
-    logger.info(`[electron-main] update-note: ${JSON.stringify(data)}`)
-    UpdateNote(data)
-  })
   // delete profile
-  ipcMain.on('delete-profile', (_, profileName: string) => {
-    logger.info(`[electron-main] delete-profile: ${profileName}`)
-    DeleteProfile(profileName)
-  })
-
-  // change-profile-status
-  ipcMain.on('change-profile-status', (_, profileName: string) => {
-    logger.info(`[electron-main] change-profile-status: ${profileName}`)
-    ChangeStatus(profileName)
+  ipcMain.handle('delete-profile', async (_, profile: Profile) => {
+    logger.info(`[electron-main] delete-profile: ${JSON.stringify(profile)}`)
+    return await DeleteProfile(profile)
   })
 
   // create proxy
-  ipcMain.handle('create-proxy', async (_, proxy) => {
+  ipcMain.handle('create-proxy', async (_, proxy: ProxyData | string) => {
     logger.info(`[electron-main] create-proxy: ${JSON.stringify(proxy)}`)
-    await CreateProxy(proxy)
+    return await CreateProxy(proxy)
   })
 
   // delete proxy
-  ipcMain.handle('delete-proxy', async (_, proxyid) => {
-    logger.info(`[electron-main] delete-proxy: ${proxyid}`)
-    await DeleteProxy(proxyid)
+  ipcMain.handle('delete-proxy', async (_, proxy: ProxyData) => {
+    logger.info(`[electron-main] delete-proxy: ${proxy.id}`)
+    await DeleteProxy(proxy)
   })
 
   // get proxies
-  ipcMain.handle('get-proxies', async () => {
+  ipcMain.handle('load-proxies', async () => {
     logger.info('[electron-main] get-proxies')
     const proxies = await GetProxies()
     return proxies
   })
 
-  // test proxy
-  ipcMain.handle('test-proxy', async (_, proxy) => {
-    logger.info(`[electron-main] test-proxy: ${proxy}`)
-    return await testProxy(proxy)
-  })
-
   // edit proxy
-  ipcMain.handle('edit-proxy', async (_, proxyID, proxy) => {
-    logger.info(`[electron-main] edit-proxy: ${proxyID} ${JSON.stringify(proxy)}`)
-    return await editProxy(proxyID, proxy)
+  ipcMain.handle('edit-proxy', async (_, editProxyData: ProxyData) => {
+    logger.info(`[electron-main] edit-proxy: ${editProxyData.id} ${JSON.stringify(editProxyData)}`)
+    return await editProxy(editProxyData)
   })
 
-  // get proxy country
-  ipcMain.handle('get-proxy-country', async (_, proxy) => {
+  // get-proxy-country
+  ipcMain.handle('get-proxy-country', async (_, proxy: string) => {
     logger.info(`[electron-main] get-proxy-country: ${proxy}`)
     return await getProxyCountry(proxy)
   })
 
-  // parse proxy
-  ipcMain.handle('parse-proxy-create', async (_, proxy) => {
-    logger.info(`[electron-main] parse-proxy-create: ${proxy}`)
-    return await parseProxyCreate(proxy)
+  // test proxy
+  ipcMain.handle('test-proxy', async (_, proxy: string) => {
+    logger.info(`[electron-main] test-proxy: ${proxy}`)
+    return await testProxy(proxy)
   })
 
   // LOGGING USING IPC TO MAINTAIN ORDER

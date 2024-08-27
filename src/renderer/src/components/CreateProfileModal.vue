@@ -184,14 +184,11 @@ const selectedPlatform = ref('')
 const selectedBrowser = ref('')
 
 const proxyItems = computed(() => {
-  if (store.state.proxies) {
-    return store.state.proxies.map((proxy) => ({
-      title: proxy.name,
-      value: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`,
-      id: proxy.id
-    }))
-  }
-  return []
+  return store.state.proxies.map((proxy) => ({
+    title: proxy.name,
+    value: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`,
+    id: proxy.id
+  }))
 })
 
 const selectedProxy = ref(null)
@@ -338,11 +335,6 @@ function resetFields() {
 }
 
 async function submit() {
-  if (props.profile) {
-    logger.info(`[CreateProfileModal] Updating profile: ${name.value}`)
-  } else {
-    logger.info(`[CreateProfileModal] Creating profile: ${name.value}`)
-  }
   if (valid.value) {
     if (proxy.value && !validateProxy(proxy.value)) {
       alert.value = {
@@ -357,34 +349,27 @@ async function submit() {
     proxyId = proxyItems.value.find((item) => item.value === proxy.value)?.id
     if (!proxyId && proxy.value) {
       logger.info(`[CreateProfileModal] Proxy not found. Creating new with data: ${proxy.value}`)
-      proxyId = await window.electron.ipcRenderer
-        .invoke('parse-proxy-create', proxy.value)
-        .then((response) => {
-          proxyId = response.id
-          return proxyId
-        })
+      proxyId = await store.dispatch('createProxy', `${proxy.value}`)
     }
-    console.log(proxyId)
     logger.info(`[CreateProfileModal] Proxy ID: ${proxyId}`)
     const profileData = {
+      id: props.profile ? props.profile.id : Date.now(),
       name: name.value,
       useragent: useragent.value,
       notes: notes.value,
       proxy: proxy.value,
-      proxyId: proxyId
+      proxyId: proxyId,
+      launched: false
     }
 
     if (props.profile) {
-      window.electron.ipcRenderer.send('update-profile', {
-        profileData,
-        oldProfileName: props.oldProfileName
-      })
+      store.dispatch('editProfile', profileData)
     } else {
-      window.electron.ipcRenderer.send('create-profile', profileData)
+      store.dispatch('createProfile', profileData)
     }
 
-    store.commit('fetchProfiles')
-    store.commit('fetchProxies')
+    store.dispatch('fetchProfiles') // Fetch profiles from Vuex store
+    store.dispatch('fetchProxies') // Fetch proxies from Vuex store
     close()
   }
 }
@@ -395,7 +380,7 @@ async function testProxyConnection() {
   if (proxy.value && validateProxy(proxy.value)) {
     loading.value = true
     try {
-      const response = await window.electron.ipcRenderer.invoke('test-proxy', proxy.value)
+      store.dispatch('testProxy', proxy.value)
       alert.value = {
         visible: true,
         message: response
@@ -403,7 +388,6 @@ async function testProxyConnection() {
           : 'Proxy connection failed. Please check your proxy settings.',
         type: response ? 'success' : 'error'
       }
-      //edit proxy status
     } catch (error) {
       alert.value = {
         visible: true,

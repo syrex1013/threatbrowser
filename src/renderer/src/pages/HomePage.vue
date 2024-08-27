@@ -1,6 +1,6 @@
 <template>
   <v-container fluid>
-    <v-data-table :headers="headers" :items="profiles" class="elevation-1">
+    <v-data-table :headers="headers" :items="filteredProfiles" class="elevation-1">
       <!-- Profile Name Slot -->
       <template #[`item.name`]="{ item }">
         <div class="centered-content">
@@ -80,66 +80,61 @@ import CreateProfileModal from '../components/CreateProfileModal.vue'
 import logger from '../logger/logger'
 import { Profile, ProxyData } from '../types/types'
 
-// Props to accept searchQuery from App.vue
-const props = defineProps({
-  searchQuery: {
-    type: String,
-    default: ''
-  }
-})
-
-// Define headers with the correct type
-const headers = ref([
+// Define headers
+const headers = [
   { text: 'Profile Name', value: 'name', align: 'center' },
   { text: 'Status', value: 'status', align: 'center' },
   { text: 'Proxy', value: 'proxy', align: 'center' },
   { text: 'Notes', value: 'notes', align: 'center' },
   { text: 'Actions', value: 'actions', sortable: false, align: 'center' }
-] as const)
+] as const
 
 const store = useStore()
-const profiles = computed<Profile[]>(() => store.state.profiles as Profile[])
-const proxies = computed<ProxyData[]>(() => store.state.proxies as ProxyData[])
 
+// Reactive data
+const profiles = computed(() => store.state.profiles as Profile[])
+const proxies = computed(() => store.state.proxies as ProxyData[])
+
+// Modal states
 const isEditModalVisible = ref(false)
-const editingProfile = ref<Profile>()
+const editingProfile = ref<Profile | null>(null)
 const oldProfileName = ref('')
 
 // Computed property to filter profiles based on searchQuery
-const filteredProfiles = computed<Profile[]>(() => {
-  if (!props.searchQuery) return profiles.value
+const filteredProfiles = computed(() => {
+  const searchQuery = (store.state as any).searchQuery || ''
+  if (!searchQuery) return profiles.value
   return profiles.value.filter((profile) =>
-    profile.name.toLowerCase().includes(props.searchQuery.toLowerCase())
+    profile.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 })
-logger.info(`[HomePage] Profiles: ${filteredProfiles.value}`)
 
+// Actions
 function launchProfile(profile: Profile): void {
   logger.debug('Launching profile')
-  logger.info(`[HomePage] Launching profile: ${profile.name}`)
-  window.electron.ipcRenderer.send('launch-profile', profile.name)
-  store.commit('setLaunchedProfile', profile.name)
+  logger.info(`[HomePage] Launching profile: ${profile.id}`)
+  const deepclone: Profile = JSON.parse(JSON.stringify(profile))
+  store.dispatch('launchProfile', deepclone)
 }
 
 function editProfile(profile: Profile): void {
   logger.debug('Editing profile')
-  logger.info(`[HomePage] Editing profile: ${profile.name}`)
+  logger.info(`[HomePage] Editing profile: ${profile.id}`)
   editingProfile.value = { ...profile }
   oldProfileName.value = profile.name
   isEditModalVisible.value = true
 }
 
 function deleteProfile(profile: Profile): void {
-  logger.info(`[HomePage] Deleting profile: ${profile.name}`)
-  store.commit('deleteProfile', profile.name)
+  logger.info(`[HomePage] Deleting profile: ${profile.id}`)
+  const deepclone: Profile = JSON.parse(JSON.stringify(profile))
+  store.dispatch('deleteProfile', deepclone)
 }
 
 function updateNote(profile: Profile): void {
   logger.info(`[HomePage] Updating notes for profile: ${profile.name}`)
-  window.electron.ipcRenderer.send('update-note', {
-    name: profile.name,
-    notes: profile.notes
-  })
+  const deepclone: Profile = JSON.parse(JSON.stringify(profile))
+  store.dispatch('editProfile', deepclone)
 }
 
 function getStatusColor(status: string): string {
@@ -163,14 +158,16 @@ function getProxyName(proxyId?: number): string {
   return proxy ? proxy.name : 'Unknown'
 }
 
+// Fetch profiles and proxies on mount
 onMounted(() => {
-  store.commit('fetchProfiles')
-  store.commit('fetchProxies')
+  store.dispatch('fetchProfiles')
+  store.dispatch('fetchProxies')
 })
 
+// Handle profile closed event
 window.electron.ipcRenderer.on('profile-closed', (_, profileName: string) => {
   logger.info(`[HomePage] Profile closed received: ${profileName}`)
-  store.commit('fetchProfiles')
+  store.dispatch('fetchProfiles')
   logger.debug('Profile closed')
 })
 </script>

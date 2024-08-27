@@ -38,10 +38,10 @@ export async function loadProfiles() {
   return profiles
 }
 
-export async function launchProfile(name: string) {
-  logger.info(`[profileService] Launching profile: ${name}`)
+export async function launchProfile(profile: Profile) {
+  logger.info(`[profileService] Launching profile: ${profile.id}`)
   const profilesDir = path.join(datadir, 'profiles')
-  const profilePath = path.join(profilesDir, name, 'profile.json')
+  const profilePath = path.join(profilesDir, profile.id.toString(), 'profile.json')
 
   if (fs.existsSync(profilePath)) {
     const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
@@ -64,7 +64,7 @@ export async function launchProfile(name: string) {
       headless: false,
       defaultViewport: null,
       args: browserArgs,
-      userDataDir: path.join(profilesDir, name)
+      userDataDir: path.join(profilesDir, profile.id.toString())
     })
 
     const page = await browser.newPage()
@@ -80,104 +80,72 @@ export async function launchProfile(name: string) {
       await page.goto('https://www.google.com')
     } catch (error) {
       logger.error(`[profileService] Error launching profile: ${error}`)
-      logger.info(`[profileService] Profile closed: ${name}`)
-      ChangeStatus(name)
-      ipcMain.emit('profile-closed', name)
+      logger.info(`[profileService] Profile closed: ${profile.id}`)
+      ipcMain.emit('profile-closed', profile.id)
     }
 
     // Handle browser close event
     browser.on('disconnected', () => {
-      logger.info(`[profileService] Profile closed: ${name}`)
-      ChangeStatus(name)
-      ipcMain.emit('profile-closed', name)
+      logger.info(`[profileService] Profile closed: ${profile.id}`)
+      ipcMain.emit('profile-closed', profile.id)
     })
   } else {
-    logger.error(`[profileService] Profile not found: ${name}`)
+    logger.error(`[profileService] Profile not found: ${profile.id}`)
   }
 }
 
-export async function CreateProfile(profile) {
+export async function CreateProfile(profile: Profile) {
   logger.info(`[profileService] Creating profile with data: ${JSON.stringify(profile)}`)
   const profilesDir = path.join(datadir, 'profiles')
   if (!fs.existsSync(profilesDir)) {
     fs.mkdirSync(profilesDir)
   }
-  const profileDir = path.join(profilesDir, profile.name)
+  const profileDir = path.join(profilesDir, profile.id.toString())
   if (!fs.existsSync(profileDir)) {
     fs.mkdirSync(profileDir)
   }
 
   const profilePath = path.join(profileDir, 'profile.json')
   const jsonProfile: Profile = {
+    id: profile.id,
     name: profile.name,
     useragent: profile.useragent,
     notes: profile.notes,
     proxy: profile.proxy,
     proxyId: profile.proxyId,
-    launched: false
+    launched: profile.launched
   }
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
 }
 
-export async function UpdateProfile(profileData, oldProfileName) {
+export async function editProfile(profile: Profile) {
   logger.info(
-    `[profileService] Updating profile: ${oldProfileName} with data: ${JSON.stringify(profileData)}`
+    `[profileService] Updating profile: ${profile.id} with data: ${JSON.stringify(profile)}`
   )
   const profilesDir = path.join(datadir, 'profiles')
-  const oldProfileDir = path.join(profilesDir, oldProfileName)
-  const newProfileDir = path.join(profilesDir, profileData.name)
-  const profilePath = path.join(newProfileDir, 'profile.json')
-
-  if (oldProfileName !== profileData.name && fs.existsSync(oldProfileDir)) {
-    fs.renameSync(oldProfileDir, newProfileDir)
-  }
+  const oldProfileDir = path.join(profilesDir, profile.id.toString())
+  const profilePath = path.join(oldProfileDir, 'profile.json')
 
   const jsonProfile: Profile = {
-    name: profileData.name,
-    useragent: profileData.useragent,
-    notes: profileData.notes,
-    proxy: profileData.proxy,
-    proxyId: profileData.proxyId,
-    launched: false
+    id: profile.id,
+    name: profile.name,
+    useragent: profile.useragent,
+    notes: profile.notes,
+    proxy: profile.proxy,
+    proxyId: profile.proxyId,
+    launched: profile.launched
   }
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
 }
 
-export async function UpdateNote(data) {
-  logger.info(`[profileService] Updating note: ${JSON.stringify(data)}`)
-  const profilesDir = path.join(datadir, 'profiles')
-  const profileDir = path.join(profilesDir, data.name)
-  const profilePath = path.join(profileDir, 'profile.json')
-
-  const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-  profile.notes = data.notes
-
-  fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2))
-}
-
-export async function DeleteProfile(profileName: string) {
-  logger.info(`[profileService] Deleting profile: ${profileName}`)
-  const profileDir = path.join(datadir, 'profiles', profileName)
+export async function DeleteProfile(profile: Profile) {
+  logger.info(`[profileService] Deleting profile: ${profile.id}`)
+  const profileDir = path.join(datadir, 'profiles', profile.id.toString())
 
   if (fs.existsSync(profileDir)) {
     fs.rmSync(profileDir, { recursive: true, force: true })
-    logger.info(`[profileService] Profile deleted: ${profileName}`)
+    logger.info(`[profileService] Profile deleted: ${profile.id}`)
   } else {
-    logger.error(`[profileService] Profile not found: ${profileName}`)
-  }
-}
-
-export async function ChangeStatus(profileName: string) {
-  logger.info(`[profileService] Changing status of profile: ${profileName}`)
-  const profilesDir = path.join(datadir, 'profiles')
-  const profilePath = path.join(profilesDir, profileName, 'profile.json')
-
-  if (fs.existsSync(profilePath)) {
-    const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-    profile.launched = !profile.launched
-
-    fs.writeFileSync(profilePath, JSON.stringify(profile, null, 2))
-  } else {
-    logger.error(`[profileService] Profile not found: ${profileName}`)
+    logger.error(`[profileService] Profile not found: ${profile.id}`)
   }
 }

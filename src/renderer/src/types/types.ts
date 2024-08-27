@@ -1,4 +1,5 @@
 export interface Profile {
+  id: number
   name: string
   useragent: string
   notes: string
