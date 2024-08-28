@@ -88,19 +88,6 @@
                 label="protocol://username:password@ip:port"
                 prepend-icon="mdi-shield"
               />
-
-              <center>
-                <v-btn text :disabled="loading" @click="testProxyConnection">
-                  <v-icon class="mr-2">mdi-wifi</v-icon> Test Proxy Connection
-                  <v-progress-circular
-                    v-if="loading"
-                    indeterminate
-                    color="primary"
-                    size="20"
-                    class="ml-2"
-                  />
-                </v-btn>
-              </center>
             </v-form>
           </v-col>
 
@@ -371,40 +358,6 @@ async function submit() {
     store.dispatch('fetchProfiles') // Fetch profiles from Vuex store
     store.dispatch('fetchProxies') // Fetch proxies from Vuex store
     close()
-  }
-}
-
-async function testProxyConnection() {
-  logger.info(`[CreateProfileModal] Testing proxy connection: ${proxy.value}`)
-
-  if (proxy.value && validateProxy(proxy.value)) {
-    loading.value = true
-    try {
-      store.dispatch('testProxy', proxy.value)
-      alert.value = {
-        visible: true,
-        message: response
-          ? 'Proxy connection successful.'
-          : 'Proxy connection failed. Please check your proxy settings.',
-        type: response ? 'success' : 'error'
-      }
-    } catch (error) {
-      alert.value = {
-        visible: true,
-        message: `Proxy connection failed: ${error.message}`,
-        type: 'error'
-      }
-    } finally {
-      loading.value = false
-    }
-    setTimeout(closeAlert, 5000)
-  } else {
-    alert.value = {
-      visible: true,
-      message: 'Invalid proxy format. Please enter a valid proxy.',
-      type: 'error'
-    }
-    setTimeout(closeAlert, 5000)
   }
 }
 </script>

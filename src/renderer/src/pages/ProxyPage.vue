@@ -194,14 +194,18 @@ async function checkProxy(proxy: ProxyData) {
   logger.info(`[ProxyPage] Checking proxy: ${proxy.host}:${proxy.port}`)
   proxy.status = 'Checking...'
   try {
-    await store.dispatch('getProxyCountry', {
+    const country: string = await store.dispatch('getProxyCountry', {
       proxyId: proxy.id,
       proxy: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
     })
-    await store.dispatch('getProxyStatus', {
+    const status: string = await store.dispatch('getProxyStatus', {
       proxyId: proxy.id,
       proxy: `${proxy.protocol}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
     })
+    proxy.status = status
+    proxy.country = country
+    const deepclone: ProxyData = JSON.parse(JSON.stringify(proxy))
+    store.dispatch('editProxy', deepclone)
   } catch (error) {
     //deepclone
     const deepclone: ProxyData = JSON.parse(JSON.stringify(proxy))
