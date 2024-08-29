@@ -8,14 +8,6 @@
         <v-icon left>mdi-account-plus</v-icon>
         Create profile
       </v-btn>
-      <v-text-field
-        v-model="searchQuery"
-        append-icon="mdi-magnify"
-        label="Search Profiles"
-        single-line
-        hide-details
-        class="search-bar ma-4"
-      ></v-text-field>
     </v-app-bar>
     <v-main>
       <v-navigation-drawer v-model="drawer" temporary>
@@ -33,7 +25,7 @@
         </v-list>
       </v-navigation-drawer>
       <!-- Pass the searchQuery to the router-view (Home.vue) -->
-      <router-view :search-query="searchQuery" />
+      <router-view />
     </v-main>
     <!-- Include the CreateProfileModal component -->
     <CreateProfileModal
@@ -49,7 +41,6 @@ import CreateProfileModal from './components/CreateProfileModal.vue'
 import logger from './logger/logger'
 logger.debug('App.vue loaded')
 const drawer = ref(false)
-const searchQuery = ref('')
 const isModalVisible = ref(false)
 function manageModal() {
   isModalVisible.value = !isModalVisible.value

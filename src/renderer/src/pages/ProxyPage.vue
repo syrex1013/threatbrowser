@@ -64,7 +64,46 @@
         </v-chip>
         <template v-else> Unknown </template>
       </template>
-      <!-- Other templates omitted for brevity -->
+      <template #[`item.protocol`]="{ item }">
+        <v-chip color="teal" dark>
+          <v-icon left>
+            {{
+              item.protocol === 'http'
+                ? 'mdi-web'
+                : item.protocol === 'https'
+                  ? 'mdi-lock'
+                  : item.protocol === 'SOCKS4' || item.protocol === 'SOCKS5'
+                    ? 'mdi-arrow-decision-auto'
+                    : 'mdi-arrow-decision'
+            }}
+          </v-icon>
+          {{ item.protocol.toUpperCase() }}
+        </v-chip>
+      </template>
+      <template #[`item.status`]="{ item }">
+        <v-chip :color="getStatusColor(item.status)" dark>
+          <v-icon left>
+            {{
+              item.status === 'Working'
+                ? 'mdi-check-circle'
+                : item.status === 'Not Working'
+                  ? 'mdi-close-circle'
+                  : item.status === 'Checking...'
+                    ? 'mdi-progress-clock'
+                    : 'mdi-help-circle'
+            }}
+          </v-icon>
+          {{ item.status }}
+        </v-chip>
+      </template>
+      <template #[`item.username`]="{ item }">
+        <v-icon>mdi-account</v-icon>
+        <span class="ml-2">{{ wrapText(item.username, 20) }}</span>
+      </template>
+      <template #[`item.password`]="{ item }">
+        <v-icon>mdi-lock</v-icon>
+        <span class="ml-2">{{ wrapText(item.password, 20) }}</span>
+      </template>
       <template #[`item.actions`]="{ item }">
         <div class="action-buttons">
           <v-btn color="success" small class="mr-2" @click="checkProxy(item)">
@@ -107,7 +146,7 @@ const editProxyData = ref<ProxyData | null>(null)
 const loading = ref(false)
 
 // Getters from the store
-const proxies = computed(() => store.state.proxies)
+const proxies = computed(() => store.state.proxies as ProxyData[])
 
 // Fetch proxies from the store when component is mounted
 onMounted(() => {

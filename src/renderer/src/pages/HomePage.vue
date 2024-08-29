@@ -1,65 +1,60 @@
 <template>
   <v-container fluid>
-    <v-data-table :headers="headers" :items="filteredProfiles" class="elevation-1">
+    <v-data-table :headers="headers" :items="filteredProfiles" class="elevation-1 profile-table">
       <!-- Profile Name Slot -->
       <template #[`item.name`]="{ item }">
-        <div class="centered-content">
-          <v-chip>{{ item.name }}</v-chip>
-        </div>
+        <v-chip>{{ item.name }}</v-chip>
       </template>
 
       <!-- Status Slot -->
       <template #[`item.status`]="{ item }">
-        <div class="centered-content">
-          <v-chip :color="item.launched ? 'green' : 'red'" dark>
-            <v-icon left>{{ item.launched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
-            {{ item.launched ? 'Launched' : 'Not Launched' }}
-          </v-chip>
-        </div>
+        <v-chip :color="item.launched ? 'green' : 'red'" dark>
+          <v-icon left>{{ item.launched ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
+          {{ item.launched ? 'Launched' : 'Not Launched' }}
+        </v-chip>
       </template>
 
       <!-- Proxy Slot -->
       <template #[`item.proxy`]="{ item }">
-        <div class="centered-content">
-          <v-chip :color="getStatusColor(getProxyStatus(item.proxyId))" dark>
-            <v-icon left>{{
-              getProxyStatus(item.proxyId) === 'Working'
-                ? 'mdi-shield-check'
-                : getProxyStatus(item.proxyId) === 'Not Working'
-                  ? 'mdi-shield-off'
-                  : 'mdi-help-circle'
-            }}</v-icon>
-            {{ getProxyName(item.proxyId) }}
-          </v-chip>
-        </div>
+        <v-chip :color="getStatusColor(getProxyStatus(item.proxyId))" dark>
+          <v-icon left>{{
+            getProxyStatus(item.proxyId) === 'Working'
+              ? 'mdi-shield-check'
+              : getProxyStatus(item.proxyId) === 'Not Working'
+                ? 'mdi-shield-off'
+                : 'mdi-help-circle'
+          }}</v-icon>
+          {{ getProxyName(item.proxyId) }}
+        </v-chip>
       </template>
 
       <!-- Notes Slot -->
       <template #[`item.notes`]="{ item }">
-        <div class="centered-content">
-          <v-textarea
-            v-model="item.notes"
-            outlined
-            rows="2"
-            class="notes-textarea"
-            @change="updateNote(item)"
-          ></v-textarea>
-        </div>
+        <v-textarea
+          v-model="item.notes"
+          outlined
+          rows="2"
+          :items-per-page="5"
+          class="mt-4"
+          @change="updateNote(item)"
+        ></v-textarea>
       </template>
 
       <!-- Actions Slot -->
       <template #[`item.actions`]="{ item }">
-        <div class="centered-content action-buttons">
-          <v-btn color="green" small @click="launchProfile(item)">
-            <v-icon left>mdi-play-circle</v-icon>
-          </v-btn>
-          <v-btn color="blue" small @click="editProfile(item)">
-            <v-icon left>mdi-pencil</v-icon>
-          </v-btn>
-          <v-btn color="red" small @click="deleteProfile(item)">
-            <v-icon left>mdi-delete</v-icon>
-          </v-btn>
-        </div>
+        <v-row justify="center">
+          <div class="action-buttons">
+            <v-btn color="green" small @click="launchProfile(item)">
+              <v-icon left>mdi-play-circle</v-icon>
+            </v-btn>
+            <v-btn color="blue" small @click="editProfile(item)">
+              <v-icon left>mdi-pencil</v-icon>
+            </v-btn>
+            <v-btn color="red" small @click="deleteProfile(item)">
+              <v-icon left>mdi-delete</v-icon>
+            </v-btn>
+          </div>
+        </v-row>
       </template>
     </v-data-table>
 
@@ -82,11 +77,11 @@ import { Profile, ProxyData } from '../types/types'
 
 // Define headers
 const headers = [
-  { text: 'Profile Name', value: 'name', align: 'center' },
-  { text: 'Status', value: 'status', align: 'center' },
-  { text: 'Proxy', value: 'proxy', align: 'center' },
-  { text: 'Notes', value: 'notes', align: 'center' },
-  { text: 'Actions', value: 'actions', sortable: false, align: 'center' }
+  { title: 'Profile Name', value: 'name' },
+  { title: 'Status', value: 'status' },
+  { title: 'Proxy', value: 'proxy' },
+  { title: 'Notes', value: 'notes' },
+  { title: 'Actions', value: 'actions', sortable: false }
 ] as const
 
 const store = useStore()
@@ -97,12 +92,12 @@ const proxies = computed(() => store.state.proxies as ProxyData[])
 
 // Modal states
 const isEditModalVisible = ref(false)
-const editingProfile = ref<Profile | null>(null)
+const editingProfile = ref<Profile>()
 const oldProfileName = ref('')
 
 // Computed property to filter profiles based on searchQuery
 const filteredProfiles = computed(() => {
-  const searchQuery = (store.state as any).searchQuery || ''
+  const searchQuery = store.state.searchQuery || ''
   if (!searchQuery) return profiles.value
   return profiles.value.filter((profile) =>
     profile.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -171,3 +166,21 @@ window.electron.ipcRenderer.on('profile-closed', (_, profileName: string) => {
   logger.debug('Profile closed')
 })
 </script>
+
+<style scoped>
+/* Table styling */
+.profile-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-table .v-chip {
+  margin: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+</style>
