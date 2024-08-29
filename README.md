@@ -150,7 +150,7 @@ Once your PR is reviewed and approved, it will be merged into the main branch.
 
 ## 📄 License
 
-This project is protected under the MIT License. For more details, refer to the [LICENSE](https://github.com/syrex1013/threatbrowser/LICENSE.md) file.
+This project is protected under the MIT License. For more details, refer to the [LICENSE](https://github.com/syrex1013/threatbrowser?tab=MIT-1-ov-file#readme) file.
 
 ---
 
