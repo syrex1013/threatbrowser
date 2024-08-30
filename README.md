@@ -55,6 +55,19 @@ ThreatBrowser is the first open-source multiaccounting browser. Proxy integratio
 
 ---
 
+## 📷 Gallery
+
+- Profiles Section
+  ![Main](https://i.imgur.com/2reUO2e.png)
+
+- Bypassing fingerprint tests
+  ![Main](https://i.imgur.com/FqIDZFu.png)
+
+- Proxy Manager
+  ![Main](https://i.imgur.com/Eg2XPST.png)
+
+---
+
 ## 📦 Features
 
 - Unlimited profiles
