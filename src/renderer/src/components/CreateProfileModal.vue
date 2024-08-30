@@ -38,6 +38,29 @@
                 prepend-icon="mdi-face-agent"
               ></v-text-field>
 
+              <!-- Additional Section for Cookies Input -->
+              <center>
+                <v-card-title>
+                  <v-icon class="mr-2">mdi-cookie</v-icon> (Optional) Upload Cookies in JSON Format
+                </v-card-title>
+              </center>
+
+              <v-file-input
+                label="Upload Cookies"
+                prepend-icon="mdi-file-upload"
+                accept=".json"
+                clearable
+                placeholder="Select JSON file"
+                @change="handleFileUpload"
+              ></v-file-input>
+
+              <!-- Display the uploaded cookies -->
+              <v-card-text v-if="cookies && Object.keys(cookies).length">
+                <v-alert type="info">
+                  <pre>{{ cookies }}</pre>
+                </v-alert>
+              </v-card-text>
+
               <center>
                 <v-card-title>
                   <v-icon class="mr-2">mdi-face-agent</v-icon> (Optional) User Agent Details
@@ -157,6 +180,7 @@ const alert = ref({
   type: 'error'
 })
 const loading = ref(false)
+const cookies = ref({})
 const store = useStore()
 
 const rules = {
@@ -195,6 +219,27 @@ function selectfunc(selectedValue) {
   if (selectedItem) {
     logger.info(`[CreateProfileModal] Selected Proxy: ${selectedItem.value}`)
     proxy.value = selectedItem.value
+  }
+}
+
+function handleFileUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        cookies.value = JSON.parse(e.target.result)
+        logger.info('[CreateProfileModal] Cookies uploaded successfully:', cookies.value)
+      } catch (error) {
+        alert.value = {
+          visible: true,
+          message: 'Invalid JSON format. Please upload a valid cookies file.',
+          type: 'error'
+        }
+        setTimeout(closeAlert, 5000)
+      }
+    }
+    reader.readAsText(file)
   }
 }
 
@@ -339,6 +384,8 @@ async function submit() {
       proxyId = await store.dispatch('createProxy', `${proxy.value}`)
     }
     logger.info(`[CreateProfileModal] Proxy ID: ${proxyId}`)
+    //deepclone cookies
+    const cookiesClone = JSON.stringify(cookies.value)
     const profileData = {
       id: props.profile ? props.profile.id : Date.now(),
       name: name.value,
@@ -346,6 +393,7 @@ async function submit() {
       notes: notes.value,
       proxy: proxy.value,
       proxyId: proxyId,
+      cookies: cookiesClone,
       launched: false
     }
 

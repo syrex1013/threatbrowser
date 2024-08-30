@@ -6,6 +6,7 @@ export interface Profile {
   proxy: string
   proxyId?: number
   launched: boolean
+  cookies?: string
 }
 
 export interface ProxyData {

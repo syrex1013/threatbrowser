@@ -44,14 +44,14 @@ export async function launchProfile(profile: Profile) {
   const profilePath = path.join(profilesDir, profile.id.toString(), 'profile.json')
 
   if (fs.existsSync(profilePath)) {
-    const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-    logger.info(`[profileService] Profile data: ${JSON.stringify(profile)}`)
+    const profileData: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
+    logger.info(`[profileService] Profile data: ${JSON.stringify(profileData)}`)
     const browserArgs: string[] = []
     let proxyUsername: string = ''
     let proxyPassword: string = ''
 
-    if (profile.proxy) {
-      const proxyUrl = new URL(profile.proxy)
+    if (profileData.proxy) {
+      const proxyUrl = new URL(profileData.proxy)
       browserArgs.push(`--proxy-server=${proxyUrl.protocol}//${proxyUrl.hostname}:${proxyUrl.port}`)
 
       if (proxyUrl.username && proxyUrl.password) {
@@ -73,9 +73,15 @@ export async function launchProfile(profile: Profile) {
       await page.authenticate({ username: proxyUsername, password: proxyPassword })
     }
 
-    if (profile.useragent) {
-      await page.setUserAgent(profile.useragent)
+    if (profileData.useragent) {
+      await page.setUserAgent(profileData.useragent)
     }
+
+    if (profileData.cookies) {
+      const cookies = JSON.parse(profileData.cookies)
+      await page.setCookie(cookies)
+    }
+
     try {
       await page.goto('https://www.google.com')
     } catch (error) {
@@ -113,7 +119,8 @@ export async function CreateProfile(profile: Profile) {
     notes: profile.notes,
     proxy: profile.proxy,
     proxyId: profile.proxyId,
-    launched: profile.launched
+    launched: profile.launched,
+    cookies: profile.cookies
   }
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
 }
@@ -133,7 +140,8 @@ export async function editProfile(profile: Profile) {
     notes: profile.notes,
     proxy: profile.proxy,
     proxyId: profile.proxyId,
-    launched: profile.launched
+    launched: profile.launched,
+    cookies: profile.cookies
   }
   fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
 }
