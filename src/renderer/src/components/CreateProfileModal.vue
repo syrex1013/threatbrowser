@@ -393,7 +393,7 @@ async function submit() {
       notes: notes.value,
       proxy: proxy.value,
       proxyId: proxyId,
-      cookies: cookiesClone,
+      cookies: cookiesClone ? cookiesClone : '{}',
       launched: false
     }
 

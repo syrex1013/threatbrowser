@@ -53,6 +53,9 @@
             <v-btn color="red" small @click="deleteProfile(item)">
               <v-icon left>mdi-delete</v-icon>
             </v-btn>
+            <v-btn v-if="item.cookies" color="orange" small @click="exportCookies(item)">
+              <v-icon left>mdi-cookie</v-icon>
+            </v-btn>
           </div>
         </v-row>
       </template>
@@ -151,6 +154,21 @@ function getProxyStatus(proxyId?: number): string {
 function getProxyName(proxyId?: number): string {
   const proxy = proxies.value.find((p) => p.id === proxyId)
   return proxy ? proxy.name : 'Unknown'
+}
+
+function exportCookies(profile: Profile): void {
+  if (profile.cookies) {
+    const blob = new Blob([profile.cookies], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${profile.name}_cookies.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    logger.info(`[HomePage] Exported cookies for profile: ${profile.name}`)
+  } else {
+    logger.error(`[HomePage] No cookies to export for profile: ${profile.name}`)
+  }
 }
 
 // Fetch profiles and proxies on mount

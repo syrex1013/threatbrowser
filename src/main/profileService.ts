@@ -78,8 +78,10 @@ export async function launchProfile(profile: Profile) {
     }
 
     if (profileData.cookies) {
-      const cookies = JSON.parse(profileData.cookies)
-      await page.setCookie(cookies)
+      if (profileData.cookies !== '{}') {
+        const cookies = JSON.parse(profileData.cookies)
+        await page.setCookie(cookies)
+      }
     }
 
     try {
@@ -92,6 +94,7 @@ export async function launchProfile(profile: Profile) {
 
     // Handle browser close event
     browser.on('disconnected', () => {
+      exportCookiesToJson(page)
       logger.info(`[profileService] Profile closed: ${profile.id}`)
       ipcMain.emit('profile-closed', profile.id)
     })
@@ -99,7 +102,11 @@ export async function launchProfile(profile: Profile) {
     logger.error(`[profileService] Profile not found: ${profile.id}`)
   }
 }
-
+async function exportCookiesToJson(page: puppeteer.Page) {
+  const cookies = await page.cookies()
+  //save json to file
+  fs.writeFileSync('cookies.json', JSON.stringify(cookies, null, 2))
+}
 export async function CreateProfile(profile: Profile) {
   logger.info(`[profileService] Creating profile with data: ${JSON.stringify(profile)}`)
   const profilesDir = path.join(datadir, 'profiles')
