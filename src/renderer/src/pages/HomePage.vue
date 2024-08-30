@@ -178,8 +178,12 @@ onMounted(() => {
 })
 
 // Handle profile closed event
-window.electron.ipcRenderer.on('profile-closed', (_, profileName: string) => {
-  logger.info(`[HomePage] Profile closed received: ${profileName}`)
+window.electron.ipcRenderer.on('profile-closed', (_, { id, cookies }) => {
+  logger.info(`[HomePage] Profile closed received: ${id}`)
+  store.dispatch('updateProfileCookies', {
+    profileId: id,
+    cookies: cookies // Ensure cookies are passed as JSON string
+  })
   store.dispatch('fetchProfiles')
   logger.debug('Profile closed')
 })

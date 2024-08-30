@@ -80,32 +80,65 @@ export async function launchProfile(profile: Profile) {
     if (profileData.cookies) {
       if (profileData.cookies !== '{}') {
         const cookies = JSON.parse(profileData.cookies)
-        await page.setCookie(cookies)
+        //loop and log cookies
+        cookies.forEach((cookie) => async () => {
+          logger.info(`[profileService] Setting cookie: ${cookie.name}`)
+          await page.setCookie(cookie)
+        })
       }
     }
 
-    try {
-      await page.goto('https://www.google.com')
-    } catch (error) {
-      logger.error(`[profileService] Error launching profile: ${error}`)
-      logger.info(`[profileService] Profile closed: ${profile.id}`)
-      ipcMain.emit('profile-closed', profile.id)
-    }
+    page.on('request', async () => {
+      exportCookiesToJson(page, path.join(profilesDir, profile.id.toString()))
+    })
 
     // Handle browser close event
-    browser.on('disconnected', () => {
-      exportCookiesToJson(page)
+    browser.on('disconnected', async () => {
       logger.info(`[profileService] Profile closed: ${profile.id}`)
-      ipcMain.emit('profile-closed', profile.id)
+      const cookies = await loadAndStringifyCookies(
+        path.join(profilesDir, profile.id.toString()),
+        profile
+      )
+      ipcMain.emit('profile-closed', { id: profile.id, cookies: cookies })
     })
   } else {
     logger.error(`[profileService] Profile not found: ${profile.id}`)
   }
 }
-async function exportCookiesToJson(page: puppeteer.Page) {
-  const cookies = await page.cookies()
-  //save json to file
-  fs.writeFileSync('cookies.json', JSON.stringify(cookies, null, 2))
+async function loadAndStringifyCookies(profileDir: string, profile: Profile) {
+  const pathCookie = path.join(profileDir, 'cookies.json')
+  logger.info(`[profileService] Loading cookies from: ${pathCookie}`)
+  const existingCookies = fs.existsSync(pathCookie)
+    ? JSON.parse(fs.readFileSync(pathCookie, 'utf8'))
+    : []
+  logger.info(`[profileService] Cookies loaded: ${JSON.stringify(existingCookies)}`)
+  profile.cookies = JSON.stringify(existingCookies)
+  editProfile(profile)
+  return JSON.stringify(existingCookies)
+}
+async function exportCookiesToJson(page, profileDir: string) {
+  try {
+    const cookies = await page.cookies()
+    // Append cookies to existing file
+    const pathCookie = path.join(profileDir, 'cookies.json')
+    const existingCookies = fs.existsSync(pathCookie)
+      ? JSON.parse(fs.readFileSync(pathCookie, 'utf8'))
+      : []
+
+    const updatedCookies = cookies.filter((cookie) => {
+      // Check if cookie with the same name and domain already exists
+      const existingCookie = existingCookies.find(
+        (existingCookie) =>
+          existingCookie.name === cookie.name && existingCookie.domain === cookie.domain
+      )
+      return !existingCookie
+    })
+
+    const mergedCookies = [...existingCookies, ...updatedCookies]
+    fs.writeFileSync(pathCookie, JSON.stringify(mergedCookies, null, 2))
+  } catch (error) {
+    logger.error(`[profileService] Error exporting cookies: ${error}`)
+  }
 }
 export async function CreateProfile(profile: Profile) {
   logger.info(`[profileService] Creating profile with data: ${JSON.stringify(profile)}`)

@@ -68,6 +68,15 @@ const store = createStore({
       if (index !== -1) {
         state.proxies[index].status = status
       }
+    },
+    updateProfileCookies(state, { profileId, cookies }) {
+      logger.info(`[store-mutation] Updating cookies for profile: ${profileId}`)
+      const index = state.profiles.findIndex((profile) => profile.id === profileId)
+      if (index !== -1) {
+        // Store cookies as a JSON string
+        state.profiles[index].cookies =
+          typeof cookies === 'string' ? cookies : JSON.stringify(cookies)
+      }
     }
   },
   actions: {
@@ -162,6 +171,19 @@ const store = createStore({
         return status
       } catch (error) {
         logger.info(`[store-action] Error testing proxy ${proxyId}: ${error}`)
+        throw error
+      }
+    },
+    async updateProfileCookies({ commit }, { profileId, cookies }) {
+      logger.info(`[store-action] Updating cookies for profile: ${profileId}`)
+      try {
+        // Ensure cookies are in JSON string format
+        const cookiesString = typeof cookies === 'string' ? cookies : JSON.stringify(cookies)
+
+        // Commit the mutation to update the cookies in the Vuex state
+        commit('updateProfileCookies', { profileId, cookies: cookiesString })
+      } catch (error) {
+        logger.info(`[store-action] Error updating cookies for profile ${profileId}: ${error}`)
         throw error
       }
     }
