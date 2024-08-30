@@ -39,8 +39,9 @@
 > - [📍 Overview](#-overview)
 > - [📦 Features](#-features)
 > - [🚀 Getting Started](#-getting-started)
->   - [⚙️ Installation](#️-installation)
->   - [🤖 Running threatbrowser](#-running-threatbrowser)
+>   - [⚙️ Installation for development](#️-installation-for-development)
+>   - [🤖 Running threatbrowser](#-running-threatbrowser-for-development)
+>   - [🛠 Building for windows](#-Building-for-windows)
 > - [🛠 Project Roadmap](#-project-roadmap)
 > - [🤝 Contributing](#-contributing)
 > - [📄 License](#-license)
@@ -74,7 +75,7 @@ Ensure you have the following dependencies installed on your system:
 - **TypeScript**: `version 4.x or higher`
 - **Electron**: `version 13.x or higher`
 
-### ⚙️ Installation
+### ⚙️ Installation for development
 
 1. Clone the threatbrowser repository:
 
@@ -94,13 +95,23 @@ cd threatbrowser
 npm install
 ```
 
-### 🤖 Running threatbrowser
+### 🤖 Running threatbrowser for development
+
+Use the following command to run development build
+
+```sh
+npm run dev
+```
+
+### 🛠 Building for windows
 
 Use the following command to build ThreatBrowser for windows
 
 ```sh
 npm run build:win
 ```
+
+You can also use prebuilt versions from our releses section.
 
 ## 🛠 Project Roadmap
 
@@ -150,14 +161,14 @@ Once your PR is reviewed and approved, it will be merged into the main branch.
 
 ## 📄 License
 
-This project is protected under the MIT License. For more details, refer to the [LICENSE](https://github.com/syrex1013/threatbrowser/LICENSE.md) file.
+This project is protected under the MIT License. For more details, refer to the [LICENSE](https://github.com/syrex1013/threatbrowser/blob/d01f8bfe1231c426c8bd6c01006feb9279657abc/LICENSE.md) file.
 
 ---
 
 ## 👏 Acknowledgments
 
-- Puppeter & Puppeter extra
-- Electron-vite
+- [Puppeter](https://github.com/puppeteer/puppeteer)
+- [Electron-vite](https://github.com/electron-vite)
 
 [**Return**](#-quick-links)
 
