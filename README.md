@@ -187,4 +187,9 @@ This project is protected under the MIT License. For more details, refer to the 
 
 [**Return**](#-quick-links)
 
+## GitAds Sponsored
+[![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=syrex1013/threatbrowser@github)](https://gitads.dev/v1/ad-track?source=syrex1013/threatbrowser@github)
+
+
+
 ---
