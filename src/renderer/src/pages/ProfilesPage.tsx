@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Profile, ProxyData } from '../types/types'
+import { ipc } from '../lib/ipc'
+import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 
 type ProfileClosedPayload = { id: number; cookies: string }
 
-export function ProfilesPage() {
+export function ProfilesPage(): React.JSX.Element {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [proxies, setProxies] = useState<ProxyData[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,8 +22,8 @@ export function ProfilesPage() {
       setLoading(true)
       try {
         const [loadedProfiles, loadedProxies] = await Promise.all([
-          window.electron.ipcRenderer.invoke('load-profiles', ''),
-          window.electron.ipcRenderer.invoke('load-proxies', '')
+          ipc.loadProfiles(),
+          ipc.loadProxies()
         ])
         if (!mounted) return
         setProfiles((loadedProfiles ?? []) as Profile[])
@@ -56,92 +61,85 @@ export function ProfilesPage() {
   }
 
   async function launchProfile(profile: Profile): Promise<void> {
-    await window.electron.ipcRenderer.invoke('launch-profile', profile)
+    await ipc.launchProfile(profile)
     setProfiles((prev) => prev.map((p) => (p.id === profile.id ? { ...p, launched: true } : p)))
   }
 
   async function deleteProfile(profile: Profile): Promise<void> {
-    await window.electron.ipcRenderer.invoke('delete-profile', profile)
+    await ipc.deleteProfile(profile)
     setProfiles((prev) => prev.filter((p) => p.id !== profile.id))
   }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <div className="text-lg font-semibold">Profiles</div>
           <div className="text-sm text-muted-foreground">
             Create and launch isolated browser profiles with proxy and fingerprint settings.
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <input
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search profiles…"
-            className="h-9 w-56 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="w-full sm:w-64"
           />
-          <button className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground">
-            New profile
-          </button>
+          <Button>New profile</Button>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-card">
-        <div className="grid grid-cols-[1.6fr_0.8fr_0.9fr_180px] gap-3 border-b border-border px-4 py-3 text-xs font-medium text-muted-foreground">
-          <div>Name</div>
-          <div>Status</div>
-          <div>Proxy</div>
-          <div className="text-right">Actions</div>
-        </div>
-
-        {loading ? (
-          <div className="px-4 py-6 text-sm text-muted-foreground">Loading…</div>
-        ) : filtered.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-muted-foreground">No profiles found.</div>
-        ) : (
-          <div className="divide-y divide-border">
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                className="grid grid-cols-[1.6fr_0.8fr_0.9fr_180px] items-center gap-3 px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{p.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{p.useragent}</div>
-                </div>
-                <div className="text-sm">
-                  <span
-                    className={
-                      p.launched ? 'text-emerald-400' : 'text-red-400'
-                    }
-                  >
-                    {p.launched ? 'Launched' : 'Not launched'}
-                  </span>
-                </div>
-                <div className="truncate text-sm">{proxyLabel(p.proxyId)}</div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => void launchProfile(p)}
-                    className="h-8 rounded-md bg-emerald-600/90 px-2 text-xs font-medium text-white hover:bg-emerald-600"
-                  >
-                    Launch
-                  </button>
-                  <button className="h-8 rounded-md border border-border px-2 text-xs font-medium hover:bg-accent">
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => void deleteProfile(p)}
-                    className="h-8 rounded-md border border-border px-2 text-xs font-medium hover:bg-accent"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-border/60 py-3">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Profile list</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-[1.6fr_0.8fr_0.9fr_200px] gap-3 px-4 py-3 text-xs font-medium text-muted-foreground">
+            <div>Name</div>
+            <div>Status</div>
+            <div>Proxy</div>
+            <div className="text-right">Actions</div>
           </div>
-        )}
-      </div>
+
+          {loading ? (
+            <div className="px-4 py-6 text-sm text-muted-foreground">Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div className="px-4 py-6 text-sm text-muted-foreground">No profiles found.</div>
+          ) : (
+            <div className="divide-y divide-border">
+              {filtered.map((p) => (
+                <div
+                  key={p.id}
+                  className="grid grid-cols-[1.6fr_0.8fr_0.9fr_200px] items-center gap-3 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{p.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">{p.useragent}</div>
+                  </div>
+                  <div>
+                    <Badge variant={p.launched ? 'success' : 'danger'}>
+                      {p.launched ? 'Launched' : 'Not launched'}
+                    </Badge>
+                  </div>
+                  <div className="truncate text-sm">{proxyLabel(p.proxyId)}</div>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" onClick={() => void launchProfile(p)}>
+                      Launch
+                    </Button>
+                    <Button size="sm" variant="secondary">
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => void deleteProfile(p)}>
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </motion.div>
   )
 }
