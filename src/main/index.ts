@@ -14,6 +14,7 @@ import {
 import {
   loadProfiles,
   launchProfile,
+  launchProfileForAutomation,
   CreateProfile,
   editProfile,
   DeleteProfile
@@ -31,6 +32,10 @@ import logger from '../logger/logger'
 import { Profile, ProxyData } from './types'
 
 puppeteer.use(StealthPlugin())
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 type CampaignRunState = {
   run: CampaignRun
@@ -239,8 +244,6 @@ app.whenReady().then(() => {
       campaignRuns.set(runId, state)
       addCampaignEvent(runId, { ts: Date.now(), type: 'status', status: 'running' })
 
-      // Minimal v1 runner: only supports a single step `open_url` on an existing/new profile.
-      // Full step support will be expanded incrementally.
       try {
         const profiles = await loadProfiles()
         const profile =
@@ -250,13 +253,61 @@ app.whenReady().then(() => {
 
         if (!profile) throw new Error('No profile available to run campaign')
 
-        addCampaignEvent(runId, {
-          ts: Date.now(),
-          type: 'log',
-          level: 'info',
-          message: `Launching ${profile.name}`
-        })
-        await launchProfile(profile)
+        // Create a dedicated page for the campaign so we can execute steps.
+        const { page } = await launchProfileForAutomation(profile)
+
+        for (const [index, step] of payload.campaign.steps.entries()) {
+          addCampaignEvent(runId, { ts: Date.now(), type: 'stepStart', index, step })
+          switch (step.type) {
+            case 'openUrl': {
+              await page.goto(step.url, { waitUntil: step.waitUntil ?? 'domcontentloaded' })
+              break
+            }
+            case 'waitMs': {
+              await sleep(step.ms)
+              break
+            }
+            case 'click': {
+              await page.waitForSelector(step.selector, { timeout: 15000 })
+              await page.click(step.selector)
+              break
+            }
+            case 'type': {
+              await page.waitForSelector(step.selector, { timeout: 15000 })
+              await page.type(step.selector, step.text, { delay: step.delayMs ?? 0 })
+              break
+            }
+            case 'press': {
+              await page.keyboard.press(step.key as unknown as import('puppeteer').KeyInput)
+              break
+            }
+            case 'scrollBy': {
+              await page.evaluate(({ x, y }) => window.scrollBy(x, y), { x: step.x, y: step.y })
+              break
+            }
+            case 'eval': {
+              // best-effort: run arbitrary script in page context
+              // eslint-disable-next-line no-new-func
+              await page.evaluate(new Function(step.script) as unknown as () => unknown)
+              break
+            }
+            case 'exportCookies': {
+              const cookies = await page.cookies()
+              addCampaignEvent(runId, {
+                ts: Date.now(),
+                type: 'log',
+                level: 'info',
+                message: `cookies_count=${cookies.length}`
+              })
+              break
+            }
+            case 'closeProfile': {
+              await page.browser().close()
+              break
+            }
+          }
+          addCampaignEvent(runId, { ts: Date.now(), type: 'stepEnd', index, step })
+        }
 
         state.run.status = 'succeeded'
         state.run.finishedAt = Date.now()

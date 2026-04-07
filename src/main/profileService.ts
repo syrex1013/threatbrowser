@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import type { Browser, Page } from 'puppeteer'
 import { Profile } from './types'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
@@ -61,75 +62,7 @@ export async function launchProfile(profile: Profile) {
   const profilePath = path.join(profilesDir, profile.id.toString(), 'profile.json')
 
   if (fs.existsSync(profilePath)) {
-    const profileData: Profile = normalizeProfile(
-      JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Partial<Profile>
-    )
-    logger.info(`[profileService] Profile data: ${JSON.stringify(profileData)}`)
-    const browserArgs: string[] = []
-    let proxyUsername: string = ''
-    let proxyPassword: string = ''
-
-    if (profileData.proxy) {
-      const proxyUrl = new URL(profileData.proxy)
-      browserArgs.push(`--proxy-server=${proxyUrl.protocol}//${proxyUrl.hostname}:${proxyUrl.port}`)
-
-      if (proxyUrl.username && proxyUrl.password) {
-        proxyUsername = proxyUrl.username
-        proxyPassword = proxyUrl.password
-      }
-    }
-
-    // Best-effort WebRTC leak mitigation (not equivalent to deep engine patches)
-    if (profileData.fingerprint?.webrtc?.mode === 'disable') {
-      browserArgs.push('--disable-features=WebRtcHideLocalIpsWithMdns')
-      browserArgs.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp')
-    }
-
-    const browser = await puppeteer.launch({
-      headless: false,
-      defaultViewport: null,
-      args: browserArgs,
-      userDataDir: path.join(profilesDir, profile.id.toString())
-    })
-
-    const page = await browser.newPage()
-
-    if (proxyUsername && proxyPassword) {
-      await page.authenticate({ username: proxyUsername, password: proxyPassword })
-    }
-
-    if (profileData.useragent) {
-      await page.setUserAgent(profileData.useragent)
-    }
-
-    // Best-effort fingerprint settings (no deep engine patches)
-    await applyFingerprint(page, profileData)
-
-    if (profileData.cookies) {
-      if (profileData.cookies !== '{}') {
-        const cookies = JSON.parse(profileData.cookies)
-        for (const cookie of cookies) {
-          try {
-            logger.info(`[profileService] Setting cookie: ${cookie.name}`)
-            await page.setCookie(cookie)
-          } catch (error) {
-            logger.warn(`[profileService] setCookie failed for ${cookie?.name}: ${error}`)
-          }
-        }
-      }
-    }
-
-    page.on('request', async () => {
-      exportCookiesToJson(page, path.join(profilesDir, profile.id.toString()))
-    })
-
-    if (profileData.startUrl) {
-      try {
-        await page.goto(profileData.startUrl, { waitUntil: 'domcontentloaded' })
-      } catch (error) {
-        logger.warn(`[profileService] startUrl navigation failed: ${error}`)
-      }
-    }
+    const { browser } = await launchProfileForAutomation(profile)
 
     // Handle browser close event
     browser.on('disconnected', async () => {
@@ -143,6 +76,107 @@ export async function launchProfile(profile: Profile) {
   } else {
     logger.error(`[profileService] Profile not found: ${profile.id}`)
   }
+}
+
+export async function launchProfileForAutomation(
+  profile: Profile
+): Promise<{ browser: Browser; page: Page; profileData: Profile; profileDir: string }> {
+  const profilesDir = path.join(datadir, 'profiles')
+  const profileDir = path.join(profilesDir, profile.id.toString())
+  const profilePath = path.join(profileDir, 'profile.json')
+
+  if (!fs.existsSync(profilePath)) {
+    throw new Error(`Profile not found: ${profile.id}`)
+  }
+
+  const profileData: Profile = normalizeProfile(
+    JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Partial<Profile>
+  )
+
+  logger.info(`[profileService] Profile data: ${JSON.stringify(profileData)}`)
+
+  const browserArgs: string[] = []
+  let proxyUsername: string = ''
+  let proxyPassword: string = ''
+
+  if (profileData.proxy) {
+    const proxyUrl = new URL(profileData.proxy)
+    browserArgs.push(`--proxy-server=${proxyUrl.protocol}//${proxyUrl.hostname}:${proxyUrl.port}`)
+
+    if (proxyUrl.username && proxyUrl.password) {
+      proxyUsername = proxyUrl.username
+      proxyPassword = proxyUrl.password
+    }
+  }
+
+  // Best-effort WebRTC leak mitigation (not equivalent to deep engine patches)
+  if (profileData.fingerprint?.webrtc?.mode === 'disable') {
+    browserArgs.push('--disable-features=WebRtcHideLocalIpsWithMdns')
+    browserArgs.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp')
+  }
+
+  const browser = (await puppeteer.launch({
+    headless: false,
+    defaultViewport: null,
+    args: browserArgs,
+    userDataDir: profileDir
+  })) as unknown as Browser
+
+  const page = (await (browser as unknown as { newPage: () => Promise<Page> }).newPage()) as Page
+
+  if (proxyUsername && proxyPassword) {
+    await (
+      page as unknown as {
+        authenticate: (arg: { username: string; password: string }) => Promise<void>
+      }
+    ).authenticate({ username: proxyUsername, password: proxyPassword })
+  }
+
+  if (profileData.useragent) {
+    await (page as unknown as { setUserAgent: (ua: string) => Promise<void> }).setUserAgent(
+      profileData.useragent
+    )
+  }
+
+  await applyFingerprint(page, profileData)
+
+  if (profileData.cookies && profileData.cookies !== '{}') {
+    const cookies = JSON.parse(profileData.cookies) as unknown
+    if (Array.isArray(cookies)) {
+      for (const cookie of cookies) {
+        try {
+          const name =
+            typeof cookie === 'object' && cookie !== null && 'name' in cookie
+              ? String((cookie as { name: unknown }).name)
+              : 'unknown'
+          logger.info(`[profileService] Setting cookie: ${name}`)
+          await (
+            page as unknown as { setCookie: (...cookies: unknown[]) => Promise<void> }
+          ).setCookie(cookie)
+        } catch (error) {
+          logger.warn(`[profileService] setCookie failed: ${error}`)
+        }
+      }
+    }
+  }
+
+  ;(page as unknown as { on: (event: string, cb: () => void) => void }).on('request', () => {
+    void exportCookiesToJson(page, profileDir)
+  })
+
+  if (profileData.startUrl) {
+    try {
+      await (
+        page as unknown as {
+          goto: (url: string, opts: { waitUntil: 'domcontentloaded' }) => Promise<void>
+        }
+      ).goto(profileData.startUrl, { waitUntil: 'domcontentloaded' })
+    } catch (error) {
+      logger.warn(`[profileService] startUrl navigation failed: ${error}`)
+    }
+  }
+
+  return { browser, page, profileData, profileDir }
 }
 
 export async function exportProfileCookies(
