@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Profile, ProxyData } from '../types/types'
 import { ipc } from '../lib/ipc'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { ProfileFormDialog } from '../components/profile/ProfileFormDialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ProfileFormDialog } from '@/components/profile/ProfileFormDialog'
 
 type ProfileClosedPayload = { id: number; cookies: string }
 
@@ -44,11 +44,11 @@ export function ProfilesPage(): React.JSX.Element {
       )
       void load()
     }
-    window.electron.ipcRenderer.on('profile-closed', handler as never)
+    const unsub = ipc.onProfileClosed((payload) => handler(undefined, payload))
 
     return () => {
       mounted = false
-      window.electron.ipcRenderer.removeListener('profile-closed', handler as never)
+      unsub()
     }
   }, [])
 

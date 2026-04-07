@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { cn } from '../../lib/utils'
+import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/', label: 'Profiles' },

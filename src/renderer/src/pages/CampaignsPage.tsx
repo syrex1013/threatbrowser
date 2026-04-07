@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { Campaign } from '../../../main/campaignTypes'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Input } from '../components/ui/input'
-import { ipc } from '../lib/ipc'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { ipc } from '@/lib/ipc'
 
 export function CampaignsPage(): React.JSX.Element {
   const [running, setRunning] = useState(false)
