@@ -29,13 +29,27 @@ export async function loadProfiles() {
   profileDirs.forEach((dir) => {
     const profilePath = path.join(profilesDir, dir, 'profile.json')
     if (fs.existsSync(profilePath)) {
-      const profile: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-      profiles.push(profile)
+      const raw = JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Partial<Profile>
+      profiles.push(normalizeProfile(raw))
     }
   })
 
   logger.info(`[profileService] Profiles loaded: ${JSON.stringify(profiles)}`)
   return profiles
+}
+
+function normalizeProfile(raw: Partial<Profile>): Profile {
+  return {
+    id: raw.id ?? Date.now(),
+    name: raw.name ?? 'Unnamed profile',
+    useragent: raw.useragent ?? '',
+    notes: raw.notes ?? '',
+    proxy: raw.proxy ?? '',
+    proxyId: raw.proxyId,
+    launched: raw.launched ?? false,
+    cookies: raw.cookies,
+    fingerprint: raw.fingerprint ?? {}
+  }
 }
 
 export async function launchProfile(profile: Profile) {
@@ -44,7 +58,9 @@ export async function launchProfile(profile: Profile) {
   const profilePath = path.join(profilesDir, profile.id.toString(), 'profile.json')
 
   if (fs.existsSync(profilePath)) {
-    const profileData: Profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
+    const profileData: Profile = normalizeProfile(
+      JSON.parse(fs.readFileSync(profilePath, 'utf8')) as Partial<Profile>
+    )
     logger.info(`[profileService] Profile data: ${JSON.stringify(profileData)}`)
     const browserArgs: string[] = []
     let proxyUsername: string = ''
@@ -75,6 +91,34 @@ export async function launchProfile(profile: Profile) {
 
     if (profileData.useragent) {
       await page.setUserAgent(profileData.useragent)
+    }
+
+    // Best-effort fingerprint settings (no deep engine patches)
+    if (profileData.fingerprint?.timezone) {
+      try {
+        await page.emulateTimezone(profileData.fingerprint.timezone)
+      } catch (error) {
+        logger.warn(`[profileService] emulateTimezone failed: ${error}`)
+      }
+    }
+    const acceptLanguage = profileData.fingerprint?.locale
+      ? profileData.fingerprint.locale
+      : profileData.fingerprint?.languages?.length
+        ? profileData.fingerprint.languages.join(',')
+        : undefined
+    if (acceptLanguage) {
+      try {
+        await page.setExtraHTTPHeaders({ 'Accept-Language': acceptLanguage })
+      } catch (error) {
+        logger.warn(`[profileService] setExtraHTTPHeaders failed: ${error}`)
+      }
+    }
+    if (profileData.fingerprint?.viewport) {
+      try {
+        await page.setViewport(profileData.fingerprint.viewport)
+      } catch (error) {
+        logger.warn(`[profileService] setViewport failed: ${error}`)
+      }
     }
 
     if (profileData.cookies) {
