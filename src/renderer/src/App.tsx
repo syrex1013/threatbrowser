@@ -4,6 +4,7 @@ import { AppShell } from './components/layout/AppShell'
 import { ProfilesPage } from './pages/ProfilesPage'
 import { ProxiesPage } from './pages/ProxiesPage'
 import { CampaignsPage } from './pages/CampaignsPage'
+import { CookiesToolsPage } from './pages/CookiesToolsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export function App(): React.ReactElement {
@@ -14,6 +15,7 @@ export function App(): React.ReactElement {
           <Route path="/" element={<ProfilesPage />} />
           <Route path="/proxies" element={<ProxiesPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/cookies" element={<CookiesToolsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

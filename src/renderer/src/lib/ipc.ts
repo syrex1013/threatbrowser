@@ -19,6 +19,7 @@ export interface IpcApi {
 
   cookiesExport(payload: { cookies: string; format?: CookieFormat }): Promise<string>
   cookiesImport(payload: { contents: string; format?: CookieFormat }): Promise<string>
+  exportProfileCookies(payload: { profileId: number; format?: CookieFormat }): Promise<string>
 
   campaignsRun(payload: { campaign: unknown; profileId?: number }): Promise<{ runId: string }>
   campaignsRunGet(payload: { runId: string }): Promise<unknown>
@@ -73,6 +74,9 @@ export const ipc: IpcApi = {
   },
   async cookiesImport(payload) {
     return (await getElectron().ipcRenderer.invoke('cookies:import', payload)) as string
+  },
+  async exportProfileCookies(payload) {
+    return (await getElectron().ipcRenderer.invoke('profile:cookies:export', payload)) as string
   },
   async campaignsRun(payload) {
     return (await getElectron().ipcRenderer.invoke('campaigns:run', payload)) as { runId: string }
