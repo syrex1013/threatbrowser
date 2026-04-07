@@ -6,6 +6,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { app, ipcMain } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import logger from '../logger/logger'
+import { cookiesToNetscape } from './cookieFormats'
 
 let datadir = __dirname
 if (!is.dev) {
@@ -107,11 +108,14 @@ export async function launchProfile(profile: Profile) {
     if (profileData.cookies) {
       if (profileData.cookies !== '{}') {
         const cookies = JSON.parse(profileData.cookies)
-        //loop and log cookies
-        cookies.forEach((cookie) => async () => {
-          logger.info(`[profileService] Setting cookie: ${cookie.name}`)
-          await page.setCookie(cookie)
-        })
+        for (const cookie of cookies) {
+          try {
+            logger.info(`[profileService] Setting cookie: ${cookie.name}`)
+            await page.setCookie(cookie)
+          } catch (error) {
+            logger.warn(`[profileService] setCookie failed for ${cookie?.name}: ${error}`)
+          }
+        }
       }
     }
 
@@ -139,6 +143,37 @@ export async function launchProfile(profile: Profile) {
   } else {
     logger.error(`[profileService] Profile not found: ${profile.id}`)
   }
+}
+
+export async function exportProfileCookies(
+  profileId: number,
+  format: 'json' | 'netscape'
+): Promise<string> {
+  const profilesDir = path.join(datadir, 'profiles')
+  const profileDir = path.join(profilesDir, profileId.toString())
+  const pathCookie = path.join(profileDir, 'cookies.json')
+  if (!fs.existsSync(pathCookie)) return format === 'netscape' ? cookiesToNetscape([]) : '[]'
+
+  const raw = fs.readFileSync(pathCookie, 'utf8')
+  if (format === 'json') return raw
+
+  const parsed = JSON.parse(raw) as unknown
+  if (!Array.isArray(parsed)) return cookiesToNetscape([])
+  return cookiesToNetscape(parsed as any)
+}
+
+export async function importProfileCookies(profileId: number, cookiesJson: string): Promise<void> {
+  const profilesDir = path.join(datadir, 'profiles')
+  const profileDir = path.join(profilesDir, profileId.toString())
+  const pathCookie = path.join(profileDir, 'cookies.json')
+  if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true })
+  // Validate JSON is array-like; store normalized string either way
+  const parsed = JSON.parse(cookiesJson) as unknown
+  if (!Array.isArray(parsed)) {
+    fs.writeFileSync(pathCookie, '[]')
+    return
+  }
+  fs.writeFileSync(pathCookie, JSON.stringify(parsed, null, 2))
 }
 
 async function applyFingerprint(page: any, profile: Profile): Promise<void> {

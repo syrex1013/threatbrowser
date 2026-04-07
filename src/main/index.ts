@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import { cookiesToNetscape, parseCookiesJson, parseCookiesNetscape } from './cookieFormats'
 import {
   loadProfiles,
   launchProfile,
@@ -161,6 +162,33 @@ app.whenReady().then(() => {
   ipcMain.on('log-debug', async (_, message) => {
     logger.debug(message)
   })
+
+  ipcMain.handle('cookies:export', async (_, payload: { cookies: string; format?: 'json' | 'netscape' }) => {
+    const format = payload.format ?? 'json'
+    try {
+      if (format === 'json') return payload.cookies
+      const parsed = parseCookiesJson(payload.cookies)
+      return cookiesToNetscape(parsed)
+    } catch (error) {
+      logger.error(`[electron-main] cookies:export error: ${error}`)
+      throw error
+    }
+  })
+
+  ipcMain.handle(
+    'cookies:import',
+    async (_, payload: { contents: string; format?: 'json' | 'netscape' }) => {
+      const format = payload.format ?? 'json'
+      try {
+        const parsed =
+          format === 'json' ? parseCookiesJson(payload.contents) : parseCookiesNetscape(payload.contents)
+        return JSON.stringify(parsed)
+      } catch (error) {
+        logger.error(`[electron-main] cookies:import error: ${error}`)
+        throw error
+      }
+    }
+  )
 
   createWindow()
 
