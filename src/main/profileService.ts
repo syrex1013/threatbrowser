@@ -48,7 +48,9 @@ function normalizeProfile(raw: Partial<Profile>): Profile {
     proxyId: raw.proxyId,
     launched: raw.launched ?? false,
     cookies: raw.cookies,
-    fingerprint: raw.fingerprint ?? {}
+    fingerprint: raw.fingerprint ?? {},
+    startUrl: raw.startUrl,
+    tags: raw.tags ?? []
   }
 }
 
@@ -76,6 +78,12 @@ export async function launchProfile(profile: Profile) {
       }
     }
 
+    // Best-effort WebRTC leak mitigation (not equivalent to deep engine patches)
+    if (profileData.fingerprint?.webrtc?.mode === 'disable') {
+      browserArgs.push('--disable-features=WebRtcHideLocalIpsWithMdns')
+      browserArgs.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp')
+    }
+
     const browser = await puppeteer.launch({
       headless: false,
       defaultViewport: null,
@@ -94,32 +102,7 @@ export async function launchProfile(profile: Profile) {
     }
 
     // Best-effort fingerprint settings (no deep engine patches)
-    if (profileData.fingerprint?.timezone) {
-      try {
-        await page.emulateTimezone(profileData.fingerprint.timezone)
-      } catch (error) {
-        logger.warn(`[profileService] emulateTimezone failed: ${error}`)
-      }
-    }
-    const acceptLanguage = profileData.fingerprint?.locale
-      ? profileData.fingerprint.locale
-      : profileData.fingerprint?.languages?.length
-        ? profileData.fingerprint.languages.join(',')
-        : undefined
-    if (acceptLanguage) {
-      try {
-        await page.setExtraHTTPHeaders({ 'Accept-Language': acceptLanguage })
-      } catch (error) {
-        logger.warn(`[profileService] setExtraHTTPHeaders failed: ${error}`)
-      }
-    }
-    if (profileData.fingerprint?.viewport) {
-      try {
-        await page.setViewport(profileData.fingerprint.viewport)
-      } catch (error) {
-        logger.warn(`[profileService] setViewport failed: ${error}`)
-      }
-    }
+    await applyFingerprint(page, profileData)
 
     if (profileData.cookies) {
       if (profileData.cookies !== '{}') {
@@ -136,6 +119,14 @@ export async function launchProfile(profile: Profile) {
       exportCookiesToJson(page, path.join(profilesDir, profile.id.toString()))
     })
 
+    if (profileData.startUrl) {
+      try {
+        await page.goto(profileData.startUrl, { waitUntil: 'domcontentloaded' })
+      } catch (error) {
+        logger.warn(`[profileService] startUrl navigation failed: ${error}`)
+      }
+    }
+
     // Handle browser close event
     browser.on('disconnected', async () => {
       logger.info(`[profileService] Profile closed: ${profile.id}`)
@@ -147,6 +138,154 @@ export async function launchProfile(profile: Profile) {
     })
   } else {
     logger.error(`[profileService] Profile not found: ${profile.id}`)
+  }
+}
+
+async function applyFingerprint(page: any, profile: Profile): Promise<void> {
+  const fp = profile.fingerprint ?? {}
+
+  if (fp.timezone) {
+    try {
+      await page.emulateTimezone(fp.timezone)
+    } catch (error) {
+      logger.warn(`[profileService] emulateTimezone failed: ${error}`)
+    }
+  }
+
+  const acceptLanguage = fp.locale ? fp.locale : fp.languages?.length ? fp.languages.join(',') : undefined
+  if (acceptLanguage) {
+    try {
+      await page.setExtraHTTPHeaders({ 'Accept-Language': acceptLanguage })
+    } catch (error) {
+      logger.warn(`[profileService] setExtraHTTPHeaders failed: ${error}`)
+    }
+  }
+
+  if (fp.viewport) {
+    try {
+      await page.setViewport(fp.viewport)
+    } catch (error) {
+      logger.warn(`[profileService] setViewport failed: ${error}`)
+    }
+  }
+
+  // Geolocation: apply permissions + set position (works only if site requests it)
+  if (fp.geolocation) {
+    try {
+      const context = page.browserContext?.()
+      if (context?.overridePermissions) {
+        const url = profile.startUrl ? new URL(profile.startUrl).origin : undefined
+        if (url) {
+          await context.overridePermissions(url, ['geolocation'])
+        }
+      }
+      if (page.setGeolocation) {
+        await page.setGeolocation(fp.geolocation)
+      }
+    } catch (error) {
+      logger.warn(`[profileService] geolocation apply failed: ${error}`)
+    }
+  }
+
+  // Early injection: best-effort patches for navigator + WebGL + WebRTC
+  const languages = fp.languages
+  const locale = fp.locale
+  const platform = fp.platform
+  const hardwareConcurrency = fp.hardwareConcurrency
+  const deviceMemory = fp.deviceMemory
+  const webglVendor = fp.webgl?.vendor
+  const webglRenderer = fp.webgl?.renderer
+  const disableWebrtc = fp.webrtc?.mode === 'disable'
+
+  if (
+    languages ||
+    locale ||
+    platform ||
+    hardwareConcurrency ||
+    deviceMemory ||
+    webglVendor ||
+    webglRenderer ||
+    disableWebrtc
+  ) {
+    try {
+      await page.evaluateOnNewDocument(
+        (cfg: {
+          languages?: string[]
+          locale?: string
+          platform?: string
+          hardwareConcurrency?: number
+          deviceMemory?: number
+          webglVendor?: string
+          webglRenderer?: string
+          disableWebrtc?: boolean
+        }) => {
+          const defineGetter = (obj: any, prop: string, value: unknown) => {
+            try {
+              Object.defineProperty(obj, prop, {
+                get: () => value,
+                configurable: true
+              })
+            } catch {
+              // ignore
+            }
+          }
+
+          if (cfg.languages?.length) {
+            defineGetter(navigator, 'languages', cfg.languages)
+            defineGetter(navigator, 'language', cfg.languages[0])
+          } else if (cfg.locale) {
+            defineGetter(navigator, 'language', cfg.locale)
+          }
+
+          if (cfg.platform) {
+            defineGetter(navigator, 'platform', cfg.platform)
+          }
+          if (typeof cfg.hardwareConcurrency === 'number') {
+            defineGetter(navigator, 'hardwareConcurrency', cfg.hardwareConcurrency)
+          }
+          if (typeof cfg.deviceMemory === 'number') {
+            defineGetter(navigator, 'deviceMemory', cfg.deviceMemory)
+          }
+
+          if (cfg.webglVendor || cfg.webglRenderer) {
+            const patch = (proto: any) => {
+              if (!proto?.getParameter) return
+              const original = proto.getParameter
+              proto.getParameter = function (p: number) {
+                // 37445: UNMASKED_VENDOR_WEBGL, 37446: UNMASKED_RENDERER_WEBGL
+                if (p === 37445 && cfg.webglVendor) return cfg.webglVendor
+                if (p === 37446 && cfg.webglRenderer) return cfg.webglRenderer
+                return original.apply(this, arguments as any)
+              }
+            }
+            patch((window as any).WebGLRenderingContext?.prototype)
+            patch((window as any).WebGL2RenderingContext?.prototype)
+          }
+
+          if (cfg.disableWebrtc) {
+            try {
+              ;(window as any).RTCPeerConnection = undefined
+              ;(window as any).webkitRTCPeerConnection = undefined
+              ;(navigator as any).mediaDevices = undefined
+            } catch {
+              // ignore
+            }
+          }
+        },
+        {
+          languages,
+          locale,
+          platform,
+          hardwareConcurrency,
+          deviceMemory,
+          webglVendor,
+          webglRenderer,
+          disableWebrtc
+        }
+      )
+    } catch (error) {
+      logger.warn(`[profileService] evaluateOnNewDocument failed: ${error}`)
+    }
   }
 }
 async function loadAndStringifyCookies(profileDir: string, profile: Profile) {
@@ -196,7 +335,8 @@ export async function CreateProfile(profile: Profile) {
   }
 
   const profilePath = path.join(profileDir, 'profile.json')
-  const jsonProfile: Profile = {
+  const jsonProfile: Profile = normalizeProfile(profile)
+  const persisted: Profile = {
     id: profile.id,
     name: profile.name,
     useragent: profile.useragent,
@@ -204,9 +344,12 @@ export async function CreateProfile(profile: Profile) {
     proxy: profile.proxy,
     proxyId: profile.proxyId,
     launched: profile.launched,
-    cookies: profile.cookies
+    cookies: profile.cookies,
+    fingerprint: jsonProfile.fingerprint,
+    startUrl: jsonProfile.startUrl,
+    tags: jsonProfile.tags
   }
-  fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
+  fs.writeFileSync(profilePath, JSON.stringify(persisted, null, 2))
 }
 
 export async function editProfile(profile: Profile) {
@@ -217,7 +360,8 @@ export async function editProfile(profile: Profile) {
   const oldProfileDir = path.join(profilesDir, profile.id.toString())
   const profilePath = path.join(oldProfileDir, 'profile.json')
 
-  const jsonProfile: Profile = {
+  const jsonProfile: Profile = normalizeProfile(profile)
+  const persisted: Profile = {
     id: profile.id,
     name: profile.name,
     useragent: profile.useragent,
@@ -225,9 +369,12 @@ export async function editProfile(profile: Profile) {
     proxy: profile.proxy,
     proxyId: profile.proxyId,
     launched: profile.launched,
-    cookies: profile.cookies
+    cookies: profile.cookies,
+    fingerprint: jsonProfile.fingerprint,
+    startUrl: jsonProfile.startUrl,
+    tags: jsonProfile.tags
   }
-  fs.writeFileSync(profilePath, JSON.stringify(jsonProfile, null, 2))
+  fs.writeFileSync(profilePath, JSON.stringify(persisted, null, 2))
 }
 
 export async function DeleteProfile(profile: Profile) {
