@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { ProxyData } from './types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import { SocksProxyAgent } from 'socks-proxy-agent'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import logger from '../logger/logger'
@@ -18,10 +19,8 @@ export async function testProxy(proxy: string) {
   try {
     const proxydata = await parseProxy(proxy)
 
-    const proxyUrl = `${proxydata.protocol}://${proxydata.username}:${proxydata.password}@${proxydata.host}:${proxydata.port}`
-
-    // Create a HttpsProxyAgent instance using the proxy URL
-    const agent = new HttpsProxyAgent(proxyUrl)
+    const proxyUrl = toProxyUrl(proxydata)
+    const agent = createAgent(proxydata.protocol, proxyUrl)
 
     const response = await axios.get('https://httpbin.org/ip', {
       httpsAgent: agent // Adding custom agent with the proxy configuration
@@ -50,16 +49,23 @@ export async function getProxyCountry(proxy: string) {
 }
 async function parseProxy(proxy: string): Promise<ProxyData> {
   logger.info(`[proxyService] Parsing proxy internal: ${proxy}`)
-  const [protocol, address] = proxy.split('://')
-  const [credentials, hostAndPort] = address.split('@')
-  const [username, password] = credentials.split(':')
-  const [host, port] = hostAndPort.split(':')
+  const parsed = new URL(proxy)
+  const protocol = parsed.protocol.replace(':', '').toLowerCase()
+  const host = parsed.hostname
+  const port = parsed.port ? parseInt(parsed.port, 10) : NaN
+
+  if (!host || !Number.isFinite(port)) {
+    throw new Error('Invalid proxy: host/port required')
+  }
+
+  const username = decodeURIComponent(parsed.username ?? '')
+  const password = decodeURIComponent(parsed.password ?? '')
 
   const proxyObject = {
     name: '',
     protocol,
     host,
-    port: parseInt(port, 10),
+    port,
     username,
     password,
     id: Date.now(),
@@ -68,6 +74,29 @@ async function parseProxy(proxy: string): Promise<ProxyData> {
   }
   logger.info(`[proxyService] Parsed proxy: ${JSON.stringify(proxyObject)}`)
   return proxyObject
+}
+
+function toProxyUrl(proxy: ProxyData): string {
+  const scheme = proxy.protocol.toLowerCase()
+  const auth =
+    proxy.username && proxy.password
+      ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`
+      : proxy.username
+        ? `${encodeURIComponent(proxy.username)}@`
+        : ''
+  return `${scheme}://${auth}${proxy.host}:${proxy.port}`
+}
+
+function createAgent(
+  protocol: string,
+  proxyUrl: string
+): HttpsProxyAgent<string> | SocksProxyAgent {
+  const scheme = protocol.toLowerCase()
+  if (scheme === 'socks4' || scheme === 'socks5' || scheme === 'socks') {
+    return new SocksProxyAgent(proxyUrl)
+  }
+  // http/https proxies
+  return new HttpsProxyAgent(proxyUrl)
 }
 export async function CreateProxy(ProxyData: ProxyData | string): Promise<ProxyData> {
   if (typeof ProxyData === 'string') {
