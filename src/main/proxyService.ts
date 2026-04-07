@@ -3,7 +3,6 @@ import fs from 'fs'
 import path from 'path'
 import { ProxyData } from './types'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { SocksProxyAgent } from 'socks-proxy-agent'
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import logger from '../logger/logger'
@@ -20,7 +19,7 @@ export async function testProxy(proxy: string) {
     const proxydata = await parseProxy(proxy)
 
     const proxyUrl = toProxyUrl(proxydata)
-    const agent = createAgent(proxydata.protocol, proxyUrl)
+    const agent = await createAgent(proxydata.protocol, proxyUrl)
 
     const response = await axios.get('https://httpbin.org/ip', {
       httpsAgent: agent // Adding custom agent with the proxy configuration
@@ -87,13 +86,14 @@ function toProxyUrl(proxy: ProxyData): string {
   return `${scheme}://${auth}${proxy.host}:${proxy.port}`
 }
 
-function createAgent(
-  protocol: string,
-  proxyUrl: string
-): HttpsProxyAgent<string> | SocksProxyAgent {
+async function createAgent(protocol: string, proxyUrl: string): Promise<unknown> {
   const scheme = protocol.toLowerCase()
   if (scheme === 'socks4' || scheme === 'socks5' || scheme === 'socks') {
-    return new SocksProxyAgent(proxyUrl)
+    // socks-proxy-agent is ESM-only; dynamic import keeps CJS bundling working for Electron main.
+    const mod = (await import('socks-proxy-agent')) as unknown as {
+      SocksProxyAgent: new (url: string) => unknown
+    }
+    return new mod.SocksProxyAgent(proxyUrl)
   }
   // http/https proxies
   return new HttpsProxyAgent(proxyUrl)
