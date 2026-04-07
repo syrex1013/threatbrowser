@@ -11,4 +11,3 @@ ReactDOM.createRoot(document.getElementById('app')!).render(
     </HashRouter>
   </React.StrictMode>
 )
-

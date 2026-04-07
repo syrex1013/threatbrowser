@@ -7,11 +7,14 @@ export function ProxiesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Proxies</CardTitle>
-          <CardDescription>Manage proxies, validate status, and assign to profiles.</CardDescription>
+          <CardDescription>
+            Manage proxies, validate status, and assign to profiles.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">UI migration in progress.</CardContent>
+        <CardContent className="text-sm text-muted-foreground">
+          UI migration in progress.
+        </CardContent>
       </Card>
     </motion.div>
   )
 }
-

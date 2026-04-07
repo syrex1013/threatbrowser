@@ -21,4 +21,3 @@ export function App(): React.ReactElement {
     </AppShell>
   )
 }
-

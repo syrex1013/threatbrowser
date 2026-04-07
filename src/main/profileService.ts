@@ -6,7 +6,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { app, ipcMain } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import logger from '../logger/logger'
-import { cookiesToNetscape } from './cookieFormats'
+import { cookiesToNetscape, type PuppeteerCookie } from './cookieFormats'
 
 let datadir = __dirname
 if (!is.dev) {
@@ -159,7 +159,7 @@ export async function exportProfileCookies(
 
   const parsed = JSON.parse(raw) as unknown
   if (!Array.isArray(parsed)) return cookiesToNetscape([])
-  return cookiesToNetscape(parsed as any)
+  return cookiesToNetscape(parsed as unknown as PuppeteerCookie[])
 }
 
 export async function importProfileCookies(profileId: number, cookiesJson: string): Promise<void> {
@@ -176,21 +176,43 @@ export async function importProfileCookies(profileId: number, cookiesJson: strin
   fs.writeFileSync(pathCookie, JSON.stringify(parsed, null, 2))
 }
 
-async function applyFingerprint(page: any, profile: Profile): Promise<void> {
+async function applyFingerprint(page: unknown, profile: Profile): Promise<void> {
+  const typedPage = page as {
+    emulateTimezone?: (tz: string) => Promise<void>
+    setExtraHTTPHeaders?: (headers: Record<string, string>) => Promise<void>
+    setViewport?: (viewport: {
+      width: number
+      height: number
+      deviceScaleFactor?: number
+    }) => Promise<void>
+    setGeolocation?: (geo: {
+      latitude: number
+      longitude: number
+      accuracy?: number
+    }) => Promise<void>
+    evaluateOnNewDocument?: (fn: unknown, arg: unknown) => Promise<void>
+    browserContext?: () => {
+      overridePermissions?: (origin: string, permissions: string[]) => Promise<void>
+    }
+  }
   const fp = profile.fingerprint ?? {}
 
   if (fp.timezone) {
     try {
-      await page.emulateTimezone(fp.timezone)
+      await typedPage.emulateTimezone?.(fp.timezone)
     } catch (error) {
       logger.warn(`[profileService] emulateTimezone failed: ${error}`)
     }
   }
 
-  const acceptLanguage = fp.locale ? fp.locale : fp.languages?.length ? fp.languages.join(',') : undefined
+  const acceptLanguage = fp.locale
+    ? fp.locale
+    : fp.languages?.length
+      ? fp.languages.join(',')
+      : undefined
   if (acceptLanguage) {
     try {
-      await page.setExtraHTTPHeaders({ 'Accept-Language': acceptLanguage })
+      await typedPage.setExtraHTTPHeaders?.({ 'Accept-Language': acceptLanguage })
     } catch (error) {
       logger.warn(`[profileService] setExtraHTTPHeaders failed: ${error}`)
     }
@@ -198,7 +220,7 @@ async function applyFingerprint(page: any, profile: Profile): Promise<void> {
 
   if (fp.viewport) {
     try {
-      await page.setViewport(fp.viewport)
+      await typedPage.setViewport?.(fp.viewport)
     } catch (error) {
       logger.warn(`[profileService] setViewport failed: ${error}`)
     }
@@ -207,16 +229,14 @@ async function applyFingerprint(page: any, profile: Profile): Promise<void> {
   // Geolocation: apply permissions + set position (works only if site requests it)
   if (fp.geolocation) {
     try {
-      const context = page.browserContext?.()
+      const context = typedPage.browserContext?.()
       if (context?.overridePermissions) {
         const url = profile.startUrl ? new URL(profile.startUrl).origin : undefined
         if (url) {
           await context.overridePermissions(url, ['geolocation'])
         }
       }
-      if (page.setGeolocation) {
-        await page.setGeolocation(fp.geolocation)
-      }
+      await typedPage.setGeolocation?.(fp.geolocation)
     } catch (error) {
       logger.warn(`[profileService] geolocation apply failed: ${error}`)
     }
@@ -243,7 +263,7 @@ async function applyFingerprint(page: any, profile: Profile): Promise<void> {
     disableWebrtc
   ) {
     try {
-      await page.evaluateOnNewDocument(
+      await typedPage.evaluateOnNewDocument?.(
         (cfg: {
           languages?: string[]
           locale?: string
@@ -254,9 +274,10 @@ async function applyFingerprint(page: any, profile: Profile): Promise<void> {
           webglRenderer?: string
           disableWebrtc?: boolean
         }) => {
-          const defineGetter = (obj: any, prop: string, value: unknown) => {
+          const defineGetter = (obj: unknown, prop: string, value: unknown) => {
+            const target = obj as Record<string, unknown>
             try {
-              Object.defineProperty(obj, prop, {
+              Object.defineProperty(target, prop, {
                 get: () => value,
                 configurable: true
               })
@@ -283,25 +304,35 @@ async function applyFingerprint(page: any, profile: Profile): Promise<void> {
           }
 
           if (cfg.webglVendor || cfg.webglRenderer) {
-            const patch = (proto: any) => {
-              if (!proto?.getParameter) return
-              const original = proto.getParameter
-              proto.getParameter = function (p: number) {
+            const patch = (proto: unknown) => {
+              const p = proto as { getParameter?: unknown } | undefined
+              if (!p || typeof p.getParameter !== 'function') return
+              const original = p.getParameter as (...args: unknown[]) => unknown
+              p.getParameter = function (...args: unknown[]) {
+                const param = args[0]
                 // 37445: UNMASKED_VENDOR_WEBGL, 37446: UNMASKED_RENDERER_WEBGL
-                if (p === 37445 && cfg.webglVendor) return cfg.webglVendor
-                if (p === 37446 && cfg.webglRenderer) return cfg.webglRenderer
-                return original.apply(this, arguments as any)
+                if (param === 37445 && cfg.webglVendor) return cfg.webglVendor
+                if (param === 37446 && cfg.webglRenderer) return cfg.webglRenderer
+                return original.apply(this, args)
               }
             }
-            patch((window as any).WebGLRenderingContext?.prototype)
-            patch((window as any).WebGL2RenderingContext?.prototype)
+            patch(
+              (window as unknown as { WebGLRenderingContext?: { prototype?: unknown } })
+                .WebGLRenderingContext?.prototype
+            )
+            patch(
+              (window as unknown as { WebGL2RenderingContext?: { prototype?: unknown } })
+                .WebGL2RenderingContext?.prototype
+            )
           }
 
           if (cfg.disableWebrtc) {
             try {
-              ;(window as any).RTCPeerConnection = undefined
-              ;(window as any).webkitRTCPeerConnection = undefined
-              ;(navigator as any).mediaDevices = undefined
+              ;(window as unknown as { RTCPeerConnection?: unknown }).RTCPeerConnection = undefined
+              ;(
+                window as unknown as { webkitRTCPeerConnection?: unknown }
+              ).webkitRTCPeerConnection = undefined
+              ;(navigator as unknown as { mediaDevices?: unknown }).mediaDevices = undefined
             } catch {
               // ignore
             }

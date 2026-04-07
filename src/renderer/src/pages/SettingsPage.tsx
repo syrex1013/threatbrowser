@@ -13,4 +13,3 @@ export function SettingsPage(): React.JSX.Element {
     </motion.div>
   )
 }
-

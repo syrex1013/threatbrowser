@@ -69,4 +69,3 @@ export function AppShell({ children }: { children: ReactNode }): React.JSX.Eleme
     </div>
   )
 }
-

@@ -24,8 +24,7 @@ export function cookiesToNetscape(cookies: PuppeteerCookie[]): string {
     const includeSubdomains = domain.startsWith('.') ? 'TRUE' : 'FALSE'
     const path = c.path || '/'
     const secure = c.secure ? 'TRUE' : 'FALSE'
-    const expires =
-      typeof c.expires === 'number' && c.expires > 0 ? Math.floor(c.expires) : 0
+    const expires = typeof c.expires === 'number' && c.expires > 0 ? Math.floor(c.expires) : 0
     const name = c.name
     const value = c.value
     return [domain, includeSubdomains, path, secure, expires, name, value].join('\t')
@@ -58,4 +57,3 @@ export function parseCookiesNetscape(input: string): PuppeteerCookie[] {
   }
   return cookies
 }
-

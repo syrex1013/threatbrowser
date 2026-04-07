@@ -52,7 +52,11 @@ export function CampaignsPage(): React.JSX.Element {
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="space-y-1">
             <div className="text-xs text-muted-foreground">Optional profile id</div>
-            <Input value={profileId} onChange={(e) => setProfileId(e.target.value)} placeholder="e.g. 17123456789" />
+            <Input
+              value={profileId}
+              onChange={(e) => setProfileId(e.target.value)}
+              placeholder="e.g. 17123456789"
+            />
           </div>
           <Button disabled={running} onClick={() => void runCampaign()}>
             {running ? 'Running…' : 'Run demo'}
@@ -62,4 +66,3 @@ export function CampaignsPage(): React.JSX.Element {
     </div>
   )
 }
-

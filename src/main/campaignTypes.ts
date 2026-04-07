@@ -12,7 +12,11 @@ export interface Campaign {
 }
 
 export type CampaignStep =
-  | { type: 'openUrl'; url: string; waitUntil?: 'domcontentloaded' | 'load' | 'networkidle0' | 'networkidle2' }
+  | {
+      type: 'openUrl'
+      url: string
+      waitUntil?: 'domcontentloaded' | 'load' | 'networkidle0' | 'networkidle2'
+    }
   | { type: 'waitMs'; ms: number }
   | { type: 'click'; selector: string }
   | { type: 'type'; selector: string; text: string; delayMs?: number }
@@ -32,12 +36,15 @@ export interface CampaignRun {
   logs: Array<{ ts: number; level: 'info' | 'warn' | 'error'; message: string }>
 }
 
-export function validateCampaign(campaign: Campaign): { ok: true } | { ok: false; errors: string[] } {
+export function validateCampaign(
+  campaign: Campaign
+): { ok: true } | { ok: false; errors: string[] } {
   const errors: string[] = []
 
   if (!campaign.id) errors.push('id is required')
   if (!campaign.name) errors.push('name is required')
-  if (!Array.isArray(campaign.steps) || campaign.steps.length === 0) errors.push('steps must be non-empty')
+  if (!Array.isArray(campaign.steps) || campaign.steps.length === 0)
+    errors.push('steps must be non-empty')
 
   for (const [idx, step] of (campaign.steps ?? []).entries()) {
     if (!step || typeof step !== 'object') {
@@ -53,15 +60,17 @@ export function validateCampaign(campaign: Campaign): { ok: true } | { ok: false
         break
       case 'click':
       case 'press':
-        if (!(step as any).selector && step.type === 'click') errors.push(`step[${idx}].selector is required`)
-        if (!(step as any).key && step.type === 'press') errors.push(`step[${idx}].key is required`)
+        if (step.type === 'click' && !('selector' in step))
+          errors.push(`step[${idx}].selector is required`)
+        if (step.type === 'press' && !('key' in step)) errors.push(`step[${idx}].key is required`)
         break
       case 'type':
         if (!step.selector) errors.push(`step[${idx}].selector is required`)
         if (typeof step.text !== 'string') errors.push(`step[${idx}].text is required`)
         break
       case 'scrollBy':
-        if (!Number.isFinite(step.x) || !Number.isFinite(step.y)) errors.push(`step[${idx}] x/y must be numbers`)
+        if (!Number.isFinite(step.x) || !Number.isFinite(step.y))
+          errors.push(`step[${idx}] x/y must be numbers`)
         break
       case 'eval':
         if (!step.script) errors.push(`step[${idx}].script is required`)
@@ -84,4 +93,3 @@ export type CampaignRunEvent =
   | { ts: number; type: 'stepStart'; index: number; step: CampaignStep }
   | { ts: number; type: 'stepEnd'; index: number; step: CampaignStep }
   | { ts: number; type: 'status'; status: CampaignRunStatus; error?: string }
-

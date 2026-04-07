@@ -91,4 +91,3 @@ export const ipc: IpcApi = {
     return () => getElectron().ipcRenderer.removeListener('profile-closed', wrapped as never)
   }
 }
-

@@ -143,4 +143,3 @@ export function ProfilesPage(): React.JSX.Element {
     </motion.div>
   )
 }
-
