@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import appIcon from '../../../../../../resources/icon.png'
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }> }
 type NavGroup = { title: string; items: NavItem[] }
@@ -56,7 +57,14 @@ export function AppShell({ children }: { children: ReactNode }): React.JSX.Eleme
       <div className="grid h-full grid-cols-[260px_1fr]">
         <aside className="border-r border-border/60 bg-card/40 backdrop-blur">
           <div className="flex h-14 items-center gap-2 border-b border-border/60 px-4">
-            <div className="size-8 rounded-lg bg-primary/15" />
+            <div className="size-8 overflow-hidden rounded-lg ring-1 ring-border/60 shadow-sm">
+              <img
+                src={appIcon}
+                alt="ThreatBrowser"
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </div>
             <div className="leading-tight">
               <div className="text-sm font-semibold">ThreatBrowser</div>
               <div className="text-xs text-muted-foreground">Multi-account workspace</div>
@@ -119,7 +127,6 @@ export function AppShell({ children }: { children: ReactNode }): React.JSX.Eleme
         <main className="min-w-0 overflow-hidden">
           <header className="flex h-14 items-center justify-between border-b border-border/60 px-4">
             <div className="text-sm text-muted-foreground">Workspace</div>
-            <div className="text-xs text-muted-foreground">Electron • Puppeteer</div>
           </header>
 
           <div className="h-[calc(100%-3.5rem)] min-w-0 overflow-auto p-4">
