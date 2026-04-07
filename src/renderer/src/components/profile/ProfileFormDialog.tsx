@@ -174,216 +174,218 @@ export function ProfileFormDialog({
           <DialogTitle>{mode === 'edit' ? 'Edit profile' : 'New profile'}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="profile-name">Name</Label>
-              <Input
-                id="profile-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Profile name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile-ua">User agent</Label>
-              <Input
-                id="profile-ua"
-                value={useragent}
-                onChange={(e) => setUseragent(e.target.value)}
-                placeholder="UA string"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile-start">Start URL (optional)</Label>
-              <Input
-                id="profile-start"
-                value={startUrl}
-                onChange={(e) => setStartUrl(e.target.value)}
-                placeholder="https://example.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile-notes">Notes</Label>
-              <Textarea
-                id="profile-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Internal notes…"
-              />
-            </div>
+        <div className="max-h-[70vh] overflow-y-auto pr-1">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="profile-name">Name</Label>
+                <Input
+                  id="profile-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Profile name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-ua">User agent</Label>
+                <Input
+                  id="profile-ua"
+                  value={useragent}
+                  onChange={(e) => setUseragent(e.target.value)}
+                  placeholder="UA string"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-start">Start URL (optional)</Label>
+                <Input
+                  id="profile-start"
+                  value={startUrl}
+                  onChange={(e) => setStartUrl(e.target.value)}
+                  placeholder="https://example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-notes">Notes</Label>
+                <Textarea
+                  id="profile-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Internal notes…"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Cookies import</Label>
-                <Badge variant="outline">JSON or Netscape</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={cookiesFormat === 'json' ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => setCookiesFormat('json')}
-                >
-                  JSON
-                </Button>
-                <Button
-                  type="button"
-                  variant={cookiesFormat === 'netscape' ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => setCookiesFormat('netscape')}
-                >
-                  Netscape
-                </Button>
-              </div>
-              <Textarea
-                value={cookiesInput}
-                onChange={(e) => setCookiesInput(e.target.value)}
-                placeholder="Paste cookies contents here…"
-                className="min-h-28 font-mono text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Timezone</Label>
-              <Input
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                placeholder="e.g. Europe/Berlin"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Locale</Label>
-              <Input
-                value={locale}
-                onChange={(e) => setLocale(e.target.value)}
-                placeholder="e.g. en-US"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Languages</Label>
-              <Input
-                value={languages}
-                onChange={(e) => setLanguages(e.target.value)}
-                placeholder="e.g. en-US,en"
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Viewport width</Label>
-                <Input
-                  value={viewportWidth}
-                  onChange={(e) => setViewportWidth(e.target.value)}
-                  placeholder="1365"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Viewport height</Label>
-                <Input
-                  value={viewportHeight}
-                  onChange={(e) => setViewportHeight(e.target.value)}
-                  placeholder="768"
-                />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Geolocation lat</Label>
-                <Input
-                  value={geoLat}
-                  onChange={(e) => setGeoLat(e.target.value)}
-                  placeholder="52.52"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Geolocation lng</Label>
-                <Input
-                  value={geoLng}
-                  onChange={(e) => setGeoLng(e.target.value)}
-                  placeholder="13.405"
-                />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Platform</Label>
-                <Input
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value)}
-                  placeholder="Win32"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Hardware concurrency</Label>
-                <Input
-                  value={hardwareConcurrency}
-                  onChange={(e) => setHardwareConcurrency(e.target.value)}
-                  placeholder="8"
-                />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Device memory (GB)</Label>
-                <Input
-                  value={deviceMemory}
-                  onChange={(e) => setDeviceMemory(e.target.value)}
-                  placeholder="8"
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <Button
-                  type="button"
-                  variant={webrtcDisable ? 'destructive' : 'outline'}
-                  onClick={() => setWebrtcDisable((v) => !v)}
-                >
-                  WebRTC {webrtcDisable ? 'Disabled' : 'Default'}
-                </Button>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>WebGL vendor</Label>
-                <Input
-                  value={webglVendor}
-                  onChange={(e) => setWebglVendor(e.target.value)}
-                  placeholder="Google Inc."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>WebGL renderer</Label>
-                <Input
-                  value={webglRenderer}
-                  onChange={(e) => setWebglRenderer(e.target.value)}
-                  placeholder="ANGLE (…)"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Proxy</Label>
-              <Input
-                value={proxyUrlOverride}
-                onChange={(e) => setProxyUrlOverride(e.target.value)}
-                placeholder="protocol://username:password@ip:port (optional override)"
-              />
-              <div className="text-xs text-muted-foreground">
-                If set, this overrides the selected proxy id.
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {proxies.slice(0, 6).map((p) => (
+                <div className="flex items-center justify-between">
+                  <Label>Cookies import</Label>
+                  <Badge variant="outline">JSON or Netscape</Badge>
+                </div>
+                <div className="flex items-center gap-2">
                   <Button
-                    key={p.id}
                     type="button"
+                    variant={cookiesFormat === 'json' ? 'secondary' : 'outline'}
                     size="sm"
-                    variant={p.id === proxyId ? 'secondary' : 'outline'}
-                    onClick={() => setProxyId(p.id)}
+                    onClick={() => setCookiesFormat('json')}
                   >
-                    {p.name}
+                    JSON
                   </Button>
-                ))}
+                  <Button
+                    type="button"
+                    variant={cookiesFormat === 'netscape' ? 'secondary' : 'outline'}
+                    size="sm"
+                    onClick={() => setCookiesFormat('netscape')}
+                  >
+                    Netscape
+                  </Button>
+                </div>
+                <Textarea
+                  value={cookiesInput}
+                  onChange={(e) => setCookiesInput(e.target.value)}
+                  placeholder="Paste cookies contents here…"
+                  className="min-h-28 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Timezone</Label>
+                <Input
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  placeholder="e.g. Europe/Berlin"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Locale</Label>
+                <Input
+                  value={locale}
+                  onChange={(e) => setLocale(e.target.value)}
+                  placeholder="e.g. en-US"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Languages</Label>
+                <Input
+                  value={languages}
+                  onChange={(e) => setLanguages(e.target.value)}
+                  placeholder="e.g. en-US,en"
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Viewport width</Label>
+                  <Input
+                    value={viewportWidth}
+                    onChange={(e) => setViewportWidth(e.target.value)}
+                    placeholder="1365"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Viewport height</Label>
+                  <Input
+                    value={viewportHeight}
+                    onChange={(e) => setViewportHeight(e.target.value)}
+                    placeholder="768"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Geolocation lat</Label>
+                  <Input
+                    value={geoLat}
+                    onChange={(e) => setGeoLat(e.target.value)}
+                    placeholder="52.52"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Geolocation lng</Label>
+                  <Input
+                    value={geoLng}
+                    onChange={(e) => setGeoLng(e.target.value)}
+                    placeholder="13.405"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Platform</Label>
+                  <Input
+                    value={platform}
+                    onChange={(e) => setPlatform(e.target.value)}
+                    placeholder="Win32"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hardware concurrency</Label>
+                  <Input
+                    value={hardwareConcurrency}
+                    onChange={(e) => setHardwareConcurrency(e.target.value)}
+                    placeholder="8"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Device memory (GB)</Label>
+                  <Input
+                    value={deviceMemory}
+                    onChange={(e) => setDeviceMemory(e.target.value)}
+                    placeholder="8"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button
+                    type="button"
+                    variant={webrtcDisable ? 'destructive' : 'outline'}
+                    onClick={() => setWebrtcDisable((v) => !v)}
+                  >
+                    WebRTC {webrtcDisable ? 'Disabled' : 'Default'}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>WebGL vendor</Label>
+                  <Input
+                    value={webglVendor}
+                    onChange={(e) => setWebglVendor(e.target.value)}
+                    placeholder="Google Inc."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>WebGL renderer</Label>
+                  <Input
+                    value={webglRenderer}
+                    onChange={(e) => setWebglRenderer(e.target.value)}
+                    placeholder="ANGLE (…)"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Proxy</Label>
+                <Input
+                  value={proxyUrlOverride}
+                  onChange={(e) => setProxyUrlOverride(e.target.value)}
+                  placeholder="protocol://username:password@ip:port (optional override)"
+                />
+                <div className="text-xs text-muted-foreground">
+                  If set, this overrides the selected proxy id.
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {proxies.slice(0, 6).map((p) => (
+                    <Button
+                      key={p.id}
+                      type="button"
+                      size="sm"
+                      variant={p.id === proxyId ? 'secondary' : 'outline'}
+                      onClick={() => setProxyId(p.id)}
+                    >
+                      {p.name}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

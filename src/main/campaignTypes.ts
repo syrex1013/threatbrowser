@@ -17,6 +17,12 @@ export type CampaignStep =
       url: string
       waitUntil?: 'domcontentloaded' | 'load' | 'networkidle0' | 'networkidle2'
     }
+  | {
+      type: 'openTab'
+      url?: string
+      waitUntil?: 'domcontentloaded' | 'load' | 'networkidle0' | 'networkidle2'
+    }
+  | { type: 'closeTab' }
   | { type: 'waitMs'; ms: number }
   | { type: 'click'; selector: string }
   | { type: 'type'; selector: string; text: string; delayMs?: number }
