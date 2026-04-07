@@ -8,6 +8,8 @@ export interface Profile {
   launched: boolean
   cookies?: string
   fingerprint?: Fingerprint
+  startUrl?: string
+  tags?: string[]
 }
 
 export interface Fingerprint {
@@ -35,6 +37,10 @@ export interface Fingerprint {
   }
   webrtc?: {
     mode: 'default' | 'disable' | 'proxyOnly'
+  }
+  webgl?: {
+    vendor?: string
+    renderer?: string
   }
 }
 

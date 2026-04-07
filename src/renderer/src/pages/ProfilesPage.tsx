@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { ProfileFormDialog } from '../components/profile/ProfileFormDialog'
 
 type ProfileClosedPayload = { id: number; cookies: string }
 
@@ -14,6 +15,8 @@ export function ProfilesPage(): React.JSX.Element {
   const [proxies, setProxies] = useState<ProxyData[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editProfile, setEditProfile] = useState<Profile | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -70,6 +73,21 @@ export function ProfilesPage(): React.JSX.Element {
     setProfiles((prev) => prev.filter((p) => p.id !== profile.id))
   }
 
+  async function saveProfile(profile: Profile): Promise<void> {
+    const isEdit = profiles.some((p) => p.id === profile.id)
+    if (isEdit) {
+      await ipc.editProfile(profile)
+    } else {
+      await ipc.createProfile(profile)
+    }
+    const [loadedProfiles, loadedProxies] = await Promise.all([
+      ipc.loadProfiles(),
+      ipc.loadProxies()
+    ])
+    setProfiles(loadedProfiles)
+    setProxies(loadedProxies)
+  }
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -86,9 +104,34 @@ export function ProfilesPage(): React.JSX.Element {
             placeholder="Search profiles…"
             className="w-full sm:w-64"
           />
-          <Button>New profile</Button>
+          <Button onClick={() => setCreateOpen(true)}>New profile</Button>
         </div>
       </div>
+
+      <ProfileFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        profile={null}
+        proxies={proxies}
+        onSubmit={async (p) => {
+          await saveProfile(p)
+          setCreateOpen(false)
+        }}
+      />
+      <ProfileFormDialog
+        open={editProfile !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditProfile(null)
+        }}
+        mode="edit"
+        profile={editProfile}
+        proxies={proxies}
+        onSubmit={async (p) => {
+          await saveProfile(p)
+          setEditProfile(null)
+        }}
+      />
 
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/60 py-3">
@@ -127,7 +170,7 @@ export function ProfilesPage(): React.JSX.Element {
                     <Button size="sm" onClick={() => void launchProfile(p)}>
                       Launch
                     </Button>
-                    <Button size="sm" variant="secondary">
+                    <Button size="sm" variant="secondary" onClick={() => setEditProfile(p)}>
                       Edit
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => void deleteProfile(p)}>
