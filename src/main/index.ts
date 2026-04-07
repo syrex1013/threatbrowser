@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { cookiesToNetscape, parseCookiesJson, parseCookiesNetscape } from './cookieFormats'
+import { type Campaign, type CampaignRun, type CampaignRunEvent, validateCampaign } from './campaignTypes'
 import {
   loadProfiles,
   launchProfile,
@@ -25,6 +26,22 @@ import logger from '../logger/logger'
 import { Profile, ProxyData } from './types'
 
 puppeteer.use(StealthPlugin())
+
+type CampaignRunState = {
+  run: CampaignRun
+  campaign: Campaign
+  events: CampaignRunEvent[]
+}
+
+const campaignRuns = new Map<string, CampaignRunState>()
+
+function addCampaignEvent(runId: string, event: CampaignRunEvent): void {
+  const run = campaignRuns.get(runId)
+  if (!run) return
+  run.events.push(event)
+  const win = BrowserWindow.getFocusedWindow()
+  if (win) win.webContents.send('campaigns:run:event', { runId, event })
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -189,6 +206,59 @@ app.whenReady().then(() => {
       }
     }
   )
+
+  ipcMain.handle('campaigns:run', async (_, payload: { campaign: Campaign; profileId?: number }) => {
+    const validated = validateCampaign(payload.campaign)
+    if (!validated.ok) {
+      const msg = validated.errors.join('; ')
+      logger.error(`[electron-main] campaigns:run invalid: ${msg}`)
+      throw new Error(`Invalid campaign: ${msg}`)
+    }
+
+    const runId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const run: CampaignRun = {
+      id: runId,
+      campaignId: payload.campaign.id,
+      status: 'running',
+      startedAt: Date.now(),
+      logs: []
+    }
+    const state: CampaignRunState = { run, campaign: payload.campaign, events: [] }
+    campaignRuns.set(runId, state)
+    addCampaignEvent(runId, { ts: Date.now(), type: 'status', status: 'running' })
+
+    // Minimal v1 runner: only supports a single step `open_url` on an existing/new profile.
+    // Full step support will be expanded incrementally.
+    try {
+      const profiles = await loadProfiles()
+      const profile =
+        typeof payload.profileId === 'number'
+          ? profiles.find((p) => p.id === payload.profileId)
+          : profiles[0]
+
+      if (!profile) throw new Error('No profile available to run campaign')
+
+      addCampaignEvent(runId, { ts: Date.now(), type: 'log', level: 'info', message: `Launching ${profile.name}` })
+      await launchProfile(profile)
+
+      state.run.status = 'succeeded'
+      state.run.finishedAt = Date.now()
+      addCampaignEvent(runId, { ts: Date.now(), type: 'status', status: 'succeeded' })
+      return { runId }
+    } catch (error) {
+      state.run.status = 'failed'
+      state.run.finishedAt = Date.now()
+      state.run.error = String(error)
+      addCampaignEvent(runId, { ts: Date.now(), type: 'status', status: 'failed', error: String(error) })
+      throw error
+    }
+  })
+
+  ipcMain.handle('campaigns:run:get', async (_, payload: { runId: string }) => {
+    const run = campaignRuns.get(payload.runId)
+    if (!run) return null
+    return run
+  })
 
   createWindow()
 

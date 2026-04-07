@@ -1,6 +1,8 @@
 import type { ElectronAPI } from '@electron-toolkit/preload'
 import type { Profile, ProxyData } from '../types/types'
 
+export type CookieFormat = 'json' | 'netscape'
+
 export interface IpcApi {
   loadProfiles(): Promise<Profile[]>
   createProfile(profile: Profile): Promise<void>
@@ -14,6 +16,13 @@ export interface IpcApi {
   deleteProxy(proxy: ProxyData): Promise<void>
   testProxy(proxyUrl: string): Promise<boolean>
   getProxyCountry(proxyUrl: string): Promise<string>
+
+  cookiesExport(payload: { cookies: string; format?: CookieFormat }): Promise<string>
+  cookiesImport(payload: { contents: string; format?: CookieFormat }): Promise<string>
+
+  campaignsRun(payload: { campaign: unknown; profileId?: number }): Promise<{ runId: string }>
+  campaignsRunGet(payload: { runId: string }): Promise<unknown>
+  onCampaignRunEvent(handler: (payload: { runId: string; event: unknown }) => void): () => void
 
   onProfileClosed(handler: (payload: { id: number; cookies: string }) => void): () => void
 }
@@ -58,6 +67,23 @@ export const ipc: IpcApi = {
   },
   async getProxyCountry(proxyUrl) {
     return (await getElectron().ipcRenderer.invoke('get-proxy-country', proxyUrl)) as string
+  },
+  async cookiesExport(payload) {
+    return (await getElectron().ipcRenderer.invoke('cookies:export', payload)) as string
+  },
+  async cookiesImport(payload) {
+    return (await getElectron().ipcRenderer.invoke('cookies:import', payload)) as string
+  },
+  async campaignsRun(payload) {
+    return (await getElectron().ipcRenderer.invoke('campaigns:run', payload)) as { runId: string }
+  },
+  async campaignsRunGet(payload) {
+    return (await getElectron().ipcRenderer.invoke('campaigns:run:get', payload)) as unknown
+  },
+  onCampaignRunEvent(handler) {
+    const wrapped = (_: unknown, payload: { runId: string; event: unknown }) => handler(payload)
+    getElectron().ipcRenderer.on('campaigns:run:event', wrapped as never)
+    return () => getElectron().ipcRenderer.removeListener('campaigns:run:event', wrapped as never)
   },
   onProfileClosed(handler) {
     const wrapped = (_: unknown, payload: { id: number; cookies: string }) => handler(payload)
