@@ -66,38 +66,40 @@ export function ProxyFormDialog({ open, onOpenChange, proxy, onSubmit }: Props):
           <DialogTitle>Edit proxy</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Proxy name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Host</Label>
-            <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="1.2.3.4" />
-          </div>
-          <div className="space-y-2">
-            <Label>Port</Label>
-            <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="1080" />
-          </div>
-          <div className="space-y-2">
-            <Label>Username</Label>
-            <Input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="optional"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Password</Label>
-            <Input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="optional"
-            />
+        <div className="max-h-[70vh] overflow-auto pr-1">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Name</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Proxy name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Host</Label>
+              <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="1.2.3.4" />
+            </div>
+            <div className="space-y-2">
+              <Label>Port</Label>
+              <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="1080" />
+            </div>
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <Input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="optional"
+              />
+            </div>
           </div>
         </div>
 
