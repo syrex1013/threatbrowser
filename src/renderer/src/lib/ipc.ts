@@ -17,6 +17,8 @@ export interface IpcApi {
   testProxy(proxyUrl: string): Promise<boolean>
   getProxyCountry(proxyUrl: string): Promise<string>
 
+  pixelscanFingerprintCheck(payload: { profileId?: number }): Promise<unknown>
+
   cookiesExport(payload: { cookies: string; format?: CookieFormat }): Promise<string>
   cookiesImport(payload: { contents: string; format?: CookieFormat }): Promise<string>
   exportProfileCookies(payload: { profileId: number; format?: CookieFormat }): Promise<string>
@@ -68,6 +70,12 @@ export const ipc: IpcApi = {
   },
   async getProxyCountry(proxyUrl) {
     return (await getElectron().ipcRenderer.invoke('get-proxy-country', proxyUrl)) as string
+  },
+  async pixelscanFingerprintCheck(payload) {
+    return (await getElectron().ipcRenderer.invoke(
+      'pixelscan:fingerprint-check',
+      payload
+    )) as unknown
   },
   async cookiesExport(payload) {
     return (await getElectron().ipcRenderer.invoke('cookies:export', payload)) as string

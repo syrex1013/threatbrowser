@@ -27,6 +27,7 @@ import {
   editProxy,
   getProxyCountry
 } from './proxyService'
+import { runPixelscanFingerprintCheck } from './pixelscan'
 
 import logger from '../logger/logger'
 import { Profile, ProxyData } from './types'
@@ -174,6 +175,13 @@ app.whenReady().then(() => {
   ipcMain.handle('test-proxy', async (_, proxy: string) => {
     logger.info(`[electron-main] test-proxy: ${proxy}`)
     return await testProxy(proxy)
+  })
+
+  ipcMain.handle('pixelscan:fingerprint-check', async (_, payload: { profileId?: number }) => {
+    logger.info(
+      `[electron-main] pixelscan:fingerprint-check profileId=${payload.profileId ?? 'auto'}`
+    )
+    return await runPixelscanFingerprintCheck(payload)
   })
 
   // LOGGING USING IPC TO MAINTAIN ORDER
