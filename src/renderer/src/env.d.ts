@@ -1,8 +1,15 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-terminal/client" />
 declare module '*.vue' {
-  import type { DefineComponent } from 'vue'
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
-  const component: DefineComponent<{}, {}, any>
+  const component: unknown
   export default component
 }
+
+declare global {
+  interface Window {
+    electron: import('@electron-toolkit/preload').ElectronAPI
+    api: unknown
+  }
+}
+
+export {}

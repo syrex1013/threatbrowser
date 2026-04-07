@@ -179,7 +179,6 @@ const alert = ref({
   message: '',
   type: 'error'
 })
-const loading = ref(false)
 const cookies = ref({})
 const store = useStore()
 

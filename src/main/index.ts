@@ -4,9 +4,17 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import { cookiesToNetscape, parseCookiesJson, parseCookiesNetscape } from './cookieFormats'
+import {
+  type Campaign,
+  type CampaignRun,
+  type CampaignRunEvent,
+  validateCampaign
+} from './campaignTypes'
 import {
   loadProfiles,
   launchProfile,
+  launchProfileForAutomation,
   CreateProfile,
   editProfile,
   DeleteProfile
@@ -24,6 +32,26 @@ import logger from '../logger/logger'
 import { Profile, ProxyData } from './types'
 
 puppeteer.use(StealthPlugin())
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+type CampaignRunState = {
+  run: CampaignRun
+  campaign: Campaign
+  events: CampaignRunEvent[]
+}
+
+const campaignRuns = new Map<string, CampaignRunState>()
+
+function addCampaignEvent(runId: string, event: CampaignRunEvent): void {
+  const run = campaignRuns.get(runId)
+  if (!run) return
+  run.events.push(event)
+  const win = BrowserWindow.getFocusedWindow()
+  if (win) win.webContents.send('campaigns:run:event', { runId, event })
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -160,6 +188,150 @@ app.whenReady().then(() => {
 
   ipcMain.on('log-debug', async (_, message) => {
     logger.debug(message)
+  })
+
+  ipcMain.handle(
+    'cookies:export',
+    async (_, payload: { cookies: string; format?: 'json' | 'netscape' }) => {
+      const format = payload.format ?? 'json'
+      try {
+        if (format === 'json') return payload.cookies
+        const parsed = parseCookiesJson(payload.cookies)
+        return cookiesToNetscape(parsed)
+      } catch (error) {
+        logger.error(`[electron-main] cookies:export error: ${error}`)
+        throw error
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'cookies:import',
+    async (_, payload: { contents: string; format?: 'json' | 'netscape' }) => {
+      const format = payload.format ?? 'json'
+      try {
+        const parsed =
+          format === 'json'
+            ? parseCookiesJson(payload.contents)
+            : parseCookiesNetscape(payload.contents)
+        return JSON.stringify(parsed)
+      } catch (error) {
+        logger.error(`[electron-main] cookies:import error: ${error}`)
+        throw error
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'campaigns:run',
+    async (_, payload: { campaign: Campaign; profileId?: number }) => {
+      const validated = validateCampaign(payload.campaign)
+      if (!validated.ok) {
+        const msg = validated.errors.join('; ')
+        logger.error(`[electron-main] campaigns:run invalid: ${msg}`)
+        throw new Error(`Invalid campaign: ${msg}`)
+      }
+
+      const runId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
+      const run: CampaignRun = {
+        id: runId,
+        campaignId: payload.campaign.id,
+        status: 'running',
+        startedAt: Date.now(),
+        logs: []
+      }
+      const state: CampaignRunState = { run, campaign: payload.campaign, events: [] }
+      campaignRuns.set(runId, state)
+      addCampaignEvent(runId, { ts: Date.now(), type: 'status', status: 'running' })
+
+      try {
+        const profiles = await loadProfiles()
+        const profile =
+          typeof payload.profileId === 'number'
+            ? profiles.find((p) => p.id === payload.profileId)
+            : profiles[0]
+
+        if (!profile) throw new Error('No profile available to run campaign')
+
+        // Create a dedicated page for the campaign so we can execute steps.
+        const { page } = await launchProfileForAutomation(profile)
+
+        for (const [index, step] of payload.campaign.steps.entries()) {
+          addCampaignEvent(runId, { ts: Date.now(), type: 'stepStart', index, step })
+          switch (step.type) {
+            case 'openUrl': {
+              await page.goto(step.url, { waitUntil: step.waitUntil ?? 'domcontentloaded' })
+              break
+            }
+            case 'waitMs': {
+              await sleep(step.ms)
+              break
+            }
+            case 'click': {
+              await page.waitForSelector(step.selector, { timeout: 15000 })
+              await page.click(step.selector)
+              break
+            }
+            case 'type': {
+              await page.waitForSelector(step.selector, { timeout: 15000 })
+              await page.type(step.selector, step.text, { delay: step.delayMs ?? 0 })
+              break
+            }
+            case 'press': {
+              await page.keyboard.press(step.key as unknown as import('puppeteer').KeyInput)
+              break
+            }
+            case 'scrollBy': {
+              await page.evaluate(({ x, y }) => window.scrollBy(x, y), { x: step.x, y: step.y })
+              break
+            }
+            case 'eval': {
+              // best-effort: run arbitrary script in page context
+              // eslint-disable-next-line no-new-func
+              await page.evaluate(new Function(step.script) as unknown as () => unknown)
+              break
+            }
+            case 'exportCookies': {
+              const cookies = await page.cookies()
+              addCampaignEvent(runId, {
+                ts: Date.now(),
+                type: 'log',
+                level: 'info',
+                message: `cookies_count=${cookies.length}`
+              })
+              break
+            }
+            case 'closeProfile': {
+              await page.browser().close()
+              break
+            }
+          }
+          addCampaignEvent(runId, { ts: Date.now(), type: 'stepEnd', index, step })
+        }
+
+        state.run.status = 'succeeded'
+        state.run.finishedAt = Date.now()
+        addCampaignEvent(runId, { ts: Date.now(), type: 'status', status: 'succeeded' })
+        return { runId }
+      } catch (error) {
+        state.run.status = 'failed'
+        state.run.finishedAt = Date.now()
+        state.run.error = String(error)
+        addCampaignEvent(runId, {
+          ts: Date.now(),
+          type: 'status',
+          status: 'failed',
+          error: String(error)
+        })
+        throw error
+      }
+    }
+  )
+
+  ipcMain.handle('campaigns:run:get', async (_, payload: { runId: string }) => {
+    const run = campaignRuns.get(payload.runId)
+    if (!run) return null
+    return run
   })
 
   createWindow()
