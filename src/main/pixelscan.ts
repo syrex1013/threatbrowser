@@ -2,9 +2,9 @@ import path from 'path'
 import fs from 'fs'
 import { is } from '@electron-toolkit/utils'
 import { app } from 'electron'
-import type { Page } from 'puppeteer'
+import type { Page } from 'puppeteer-core'
 import logger from '../logger/logger'
-import type { Profile } from './types'
+import type { Profile } from '../shared/profileSettings'
 import { loadProfiles, launchProfileForAutomation } from './profileService'
 
 export type PixelscanResult = {
@@ -18,7 +18,7 @@ export type PixelscanResult = {
 }
 
 function getDataDir(): string {
-  return is.dev ? __dirname : app.getPath('userData')
+  return process.env.THREATBROWSER_DATA_DIR || (is.dev ? __dirname : app.getPath('userData'))
 }
 
 async function clickFirstMatching(page: Page, selectors: string[]): Promise<boolean> {
@@ -72,6 +72,7 @@ async function extractText(page: Page, selectors: string[]): Promise<string | un
 
 export async function runPixelscanFingerprintCheck(payload: {
   profileId?: number
+  password?: string
 }): Promise<PixelscanResult> {
   const startedAt = Date.now()
   const url = 'https://pixelscan.net/fingerprint-check'
@@ -92,7 +93,7 @@ export async function runPixelscanFingerprintCheck(payload: {
   }
 
   try {
-    const { page, browser } = await launchProfileForAutomation(profile)
+    const { page, browser } = await launchProfileForAutomation(profile, payload.password)
 
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded' })
@@ -138,7 +139,7 @@ export async function runPixelscanFingerprintCheck(payload: {
       throw error
     }
   } catch (error) {
-    logger.error(`[pixelscan] run failed: ${String(error)}`)
+    logger.error(`[pixelscan] run failed: profile ${profile.id}`)
     return {
       url,
       profileId: profile.id,

@@ -25,13 +25,13 @@
 	<img src="https://img.shields.io/badge/YAML-CB171E.svg?style=flat&logo=YAML&logoColor=white" alt="YAML">
 	<img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite">
 	<img src="https://img.shields.io/badge/Axios-5A29E4.svg?style=flat&logo=Axios&logoColor=white" alt="Axios">
-	<img src="https://img.shields.io/badge/Vue.js-4FC08D.svg?style=flat&logo=vuedotjs&logoColor=white" alt="Vue.js">
+	<img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=react&logoColor=black" alt="React.js">
 	<br>
 	<img src="https://img.shields.io/badge/ESLint-4B32C3.svg?style=flat&logo=ESLint&logoColor=white" alt="ESLint">
 	<img src="https://img.shields.io/badge/Electron-47848F.svg?style=flat&logo=Electron&logoColor=white" alt="Electron">
 	<img src="https://img.shields.io/badge/Puppeteer-40B5A4.svg?style=flat&logo=Puppeteer&logoColor=white" alt="Puppeteer">
 	<img src="https://img.shields.io/badge/TypeScript-3178C6.svg?style=flat&logo=TypeScript&logoColor=white" alt="TypeScript">
-	<img src="https://img.shields.io/badge/Vuetify-1867C0.svg?style=flat&logo=Vuetify&logoColor=white" alt="Vuetify">
+	<img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4.svg?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
 	<img src="https://img.shields.io/badge/JSON-000000.svg?style=flat&logo=JSON&logoColor=white" alt="JSON">
 </p>
 <hr>
@@ -72,10 +72,27 @@ ThreatBrowser is the first open-source multiaccounting browser. Proxy integratio
 
 ## 📦 Features
 
-- Unlimited profiles
-- SOCKS4/5, HTTP/S proxy integration
-- Custom User Agents settings
-- Open-Source
+- Unlimited isolated profiles on the CloakBrowser stealth engine (source-patched Chromium: canvas/WebGL/audio/font/GPU fingerprint layer)
+- SOCKS4/5, HTTP/S proxy integration with health checks (latency, anonymity, exit country) and free proxy harvesting
+- Profiles without a proxy run on the direct connection with normal DNS (`--no-proxy-server`), so a dead system proxy can never break them
+- Google preseeded as the address-bar search engine for fresh profiles
+- Running-profile status auto-updates in the GUI when a browser window is closed
+- Fingerprint presets/configs, bulk profile creation, cookies import/export (JSON, Netscape, Mozilla)
+- Campaign automation and one-time temp profiles
+- CLI for framework-compatible launches (Puppeteer, Playwright, Selenium)
+
+---
+
+## 💻 CLI
+
+Launch a stored profile outside the GUI (defaults to Puppeteer):
+
+```sh
+npm run cli -- launch --profile <profile_id>
+npm run cli -- launch --profile <profile_id> --framework playwright
+npm run cli -- install        # download the stealth engine binary
+npm run cli -- info           # show installed engine version/tier
+```
 
 ---
 
@@ -85,7 +102,7 @@ ThreatBrowser is the first open-source multiaccounting browser. Proxy integratio
 
 Ensure you have the following dependencies installed on your system:
 
-- **Node.js**: `version 14.x or higher`
+- **Node.js**: `version 20.x or higher`
 - **npm**: `version 6.x or higher`
 - **TypeScript**: `version 4.x or higher`
 - **Electron**: `version 13.x or higher`
@@ -131,9 +148,10 @@ You can also use prebuilt versions from our releses section.
 ## 🛠 Project Roadmap
 
 - [x] `► Custom useragents`
-- [ ] `► More customizations of profile`
-- [ ] `► Exporting profiles and cookies`  
-       and more!
+- [x] `► More customizations of profile`
+- [x] `► Exporting profiles and cookies`
+- [x] `► Proxy manager with health checks`
+- [ ] `► and more!`
 
 ---
 
@@ -180,16 +198,14 @@ This project is protected under the MIT License. For more details, refer to the 
 
 ---
 
-## 👏 Acknowledgments
-
 - [Puppeter](https://github.com/puppeteer/puppeteer)
 - [Electron-vite](https://github.com/electron-vite)
+- [CloakBrowser](https://github.com/CloakHQ/cloakbrowser)
 
 [**Return**](#-quick-links)
 
 ## GitAds Sponsored
+
 [![Sponsored by GitAds](https://gitads.dev/v1/ad-serve?source=syrex1013/threatbrowser@github)](https://gitads.dev/v1/ad-track?source=syrex1013/threatbrowser@github)
-
-
 
 ---

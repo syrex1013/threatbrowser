@@ -8,14 +8,11 @@ import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import logger from '../logger/logger'
 
-let datadir = __dirname
-if (!is.dev) {
-  datadir = app.getPath('userData')
-}
-logger.info(`[proxyService] Data directory: ${datadir}`)
+const datadir = process.env.THREATBROWSER_DATA_DIR || (is.dev ? __dirname : app.getPath('userData'))
+fs.mkdirSync(datadir, { recursive: true })
 
 export async function testProxy(proxy: string) {
-  logger.info(`[proxyService] Testing proxy: ${proxy}`)
+  logger.info('[proxyService] Testing proxy')
   try {
     const proxydata = await parseProxy(proxy)
 
@@ -29,13 +26,13 @@ export async function testProxy(proxy: string) {
     logger.info(`[proxyService] Proxy test response: ${response.status}`)
     return response.status === 200
   } catch (error) {
-    logger.error(`[proxyService] Proxy test error: ${JSON.stringify(error)}`)
+    logger.error('[proxyService] Proxy test failed')
     return false
   }
 }
 
 export async function getProxyCountry(proxy: string) {
-  logger.info(`[proxyService] Getting proxy country: ${proxy}`)
+  logger.info('[proxyService] Getting proxy country')
   try {
     const proxydata = await parseProxy(proxy)
     const response = await axios.get(`https://ipinfo.io/${proxydata.host}/json`)
@@ -43,12 +40,11 @@ export async function getProxyCountry(proxy: string) {
     logger.info(`[proxyService] Proxy country: ${data.country}`)
     return data.country
   } catch (error) {
-    logger.error(`[proxyService] Proxy country error: ${JSON.stringify(error)}`)
+    logger.error('[proxyService] Proxy country lookup failed')
     return 'Unknown'
   }
 }
 async function parseProxy(proxy: string): Promise<ProxyData> {
-  logger.info(`[proxyService] Parsing proxy internal: ${proxy}`)
   const parsed = new URL(proxy)
   const protocol = parsed.protocol.replace(':', '').toLowerCase()
   const host = parsed.hostname
@@ -72,7 +68,6 @@ async function parseProxy(proxy: string): Promise<ProxyData> {
     status: 'UnChecked',
     country: 'Unknown'
   }
-  logger.info(`[proxyService] Parsed proxy: ${JSON.stringify(proxyObject)}`)
   return proxyObject
 }
 
@@ -102,12 +97,9 @@ export async function CreateProxy(ProxyData: ProxyData | string): Promise<ProxyD
   if (typeof ProxyData === 'string') {
     ProxyData = await parseProxy(ProxyData)
     //generate unique name
-    logger.info(
-      `[proxyService] Generating unique name for string-proxy: ${JSON.stringify(ProxyData)}`
-    )
     ProxyData.name = `Proxy ${ProxyData.id}`
   }
-  logger.info(`[proxyService] Creating proxy: ${JSON.stringify(ProxyData)}`)
+  logger.info(`[proxyService] Creating proxy ${ProxyData.id}`)
   const proxiesDir = path.join(datadir, 'proxies')
   if (!fs.existsSync(proxiesDir)) {
     fs.mkdirSync(proxiesDir)
@@ -127,7 +119,10 @@ export async function CreateProxy(ProxyData: ProxyData | string): Promise<ProxyD
     password: ProxyData.password,
     id: ProxyData.id,
     status: ProxyData.status,
-    country: ProxyData.country
+    country: ProxyData.country,
+    latencyMs: ProxyData.latencyMs ?? null,
+    anonymity: ProxyData.anonymity,
+    lastCheckedAt: ProxyData.lastCheckedAt
   }
 
   fs.writeFileSync(proxyPath, JSON.stringify(jsonProxy))
@@ -161,14 +156,12 @@ export async function GetProxies(): Promise<ProxyData[]> {
     const proxyData = fs.readFileSync(proxyPath)
     return JSON.parse(proxyData.toString())
   })
-  logger.info(`[proxyService] Got proxies: ${JSON.stringify(proxies)}`)
+  logger.info(`[proxyService] Loaded ${proxies.length} proxies`)
   return proxies
 }
 
 export async function editProxy(editProxyData: ProxyData) {
-  logger.info(
-    `[proxyService] Editing proxy: ${editProxyData.id} with new data: ${JSON.stringify(editProxyData)}`
-  )
+  logger.info(`[proxyService] Editing proxy ${editProxyData.id}`)
   const proxiesDir = path.join(datadir, 'proxies')
   const proxyDir = path.join(proxiesDir, editProxyData.id.toString())
   const proxyPath = path.join(proxyDir, 'proxy.json')
@@ -183,7 +176,10 @@ export async function editProxy(editProxyData: ProxyData) {
       password: editProxyData.password,
       id: editProxyData.id,
       status: editProxyData.status,
-      country: editProxyData.country
+      country: editProxyData.country,
+      latencyMs: editProxyData.latencyMs ?? null,
+      anonymity: editProxyData.anonymity,
+      lastCheckedAt: editProxyData.lastCheckedAt
     }
     fs.writeFileSync(proxyPath, JSON.stringify(jsonProxy))
   }

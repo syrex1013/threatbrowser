@@ -1,4 +1,4 @@
-import type { Protocol } from 'puppeteer'
+import type { Protocol } from 'puppeteer-core'
 
 export type PuppeteerCookie = Protocol.Network.CookieParam
 
@@ -56,4 +56,41 @@ export function parseCookiesNetscape(input: string): PuppeteerCookie[] {
     })
   }
   return cookies
+}
+
+const mozillaKey = (c: Record<string, unknown>, snake: string, camel: string): unknown =>
+  c[snake] ?? c[camel]
+
+export function cookiesToMozilla(cookies: PuppeteerCookie[]): string {
+  const rows = cookies.map((c) => ({
+    name: c.name,
+    value: c.value,
+    domain: c.domain ?? '',
+    path: c.path || '/',
+    expires:
+      typeof c.expires === 'number' && Number.isFinite(c.expires) ? Math.floor(c.expires) : 0,
+    secure: Boolean(c.secure),
+    httpOnly: Boolean(c.httpOnly)
+  }))
+  return JSON.stringify(rows, null, 2)
+}
+
+export function parseCookiesMozilla(input: string): PuppeteerCookie[] {
+  const data: unknown = JSON.parse(input)
+  if (!Array.isArray(data)) return []
+  return data
+    .filter((c): c is Record<string, unknown> => typeof c === 'object' && c !== null)
+    .map((c) => {
+      const expires = Number(mozillaKey(c, 'Expires raw', 'expires') ?? 0)
+      return {
+        name: String(mozillaKey(c, 'Name raw', 'name') ?? ''),
+        value: String(mozillaKey(c, 'Value raw', 'value') ?? ''),
+        domain: String(mozillaKey(c, 'Domain raw', 'domain') ?? ''),
+        path: String(mozillaKey(c, 'Path raw', 'path') ?? '/'),
+        secure: /^true$/i.test(String(mozillaKey(c, 'Secure raw', 'secure') ?? '')),
+        httpOnly: /^true$/i.test(String(mozillaKey(c, 'HttpOnly raw', 'httpOnly') ?? '')),
+        expires: Number.isFinite(expires) ? expires : undefined
+      }
+    })
+    .filter((c) => c.name && c.value)
 }

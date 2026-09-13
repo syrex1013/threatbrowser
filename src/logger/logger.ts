@@ -1,8 +1,10 @@
 import { createLogger, format, transports } from 'winston'
 import { app } from 'electron'
 import path from 'path'
+import fs from 'fs'
 
-const logDir = app.getPath('userData')
+const logDir = process.env.THREATBROWSER_DATA_DIR || app.getPath('userData')
+fs.mkdirSync(logDir, { recursive: true })
 const logFile = path.join(logDir, 'app.log')
 
 const logger = createLogger({

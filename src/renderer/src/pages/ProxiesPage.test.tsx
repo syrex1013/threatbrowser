@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HashRouter } from 'react-router-dom'
 
 import { ProxiesPage } from '@/pages/ProxiesPage'
+
+afterEach(() => cleanup())
 
 vi.mock('@/lib/ipc', () => {
   return {
@@ -23,7 +25,10 @@ vi.mock('@/lib/ipc', () => {
       getProxyCountry: vi.fn(async () => 'US'),
       testProxy: vi.fn(async () => true),
       editProxy: vi.fn(async () => undefined),
-      deleteProxy: vi.fn(async () => undefined)
+      deleteProxy: vi.fn(async () => undefined),
+      proxySources: vi.fn(async () => []),
+      scrapeProxies: vi.fn(async () => ({ proxies: [], failures: [] })),
+      checkProxies: vi.fn(async () => [])
     }
   }
 })
@@ -31,6 +36,34 @@ vi.mock('@/lib/ipc', () => {
 describe('ProxiesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('scrapes sources and imports results into the pool', async () => {
+    const user = userEvent.setup()
+    const { ipc } = await import('@/lib/ipc')
+    vi.mocked(ipc.proxySources).mockResolvedValueOnce([
+      { name: 'src-a', protocol: 'http' },
+      { name: 'src-b', protocol: 'socks5' }
+    ])
+    vi.mocked(ipc.scrapeProxies).mockResolvedValueOnce({
+      proxies: [
+        { host: '1.1.1.1', port: 8080, protocol: 'http', source: 'src-a' },
+        { host: '2.2.2.2', port: 1080, protocol: 'socks5', source: 'src-b' }
+      ],
+      failures: []
+    })
+
+    render(
+      <HashRouter>
+        <ProxiesPage />
+      </HashRouter>
+    )
+
+    await user.click(await screen.findByRole('button', { name: /Scrape \(2\)/ }))
+    expect(ipc.scrapeProxies).toHaveBeenCalledWith(['src-a', 'src-b'])
+    await user.click(await screen.findByRole('button', { name: 'Import 2 into pool' }))
+    expect(ipc.createProxy).toHaveBeenCalledWith('http://1.1.1.1:8080')
+    expect(ipc.createProxy).toHaveBeenCalledWith('socks5://2.2.2.2:1080')
   })
 
   it('renders and allows adding bulk proxies', async () => {

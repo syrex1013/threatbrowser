@@ -76,7 +76,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import CreateProfileModal from '../components/CreateProfileModal.vue'
 import logger from '../logger/logger'
-import { Profile, ProxyData } from '../types/types'
+import type { Profile } from '../../../shared/profileSettings'
+import type { ProxyData } from '../types/types'
 
 // Define headers
 const headers = [

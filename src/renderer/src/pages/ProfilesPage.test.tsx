@@ -17,6 +17,7 @@ vi.mock('@/lib/ipc', () => ({
       }
     ]),
     loadProxies: vi.fn(async () => []),
+    configsList: vi.fn(async () => []),
     launchProfile: vi.fn(async () => undefined),
     deleteProfile: vi.fn(async () => undefined),
     editProfile: vi.fn(async () => undefined),

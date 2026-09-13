@@ -13,13 +13,23 @@ type StepKind = CampaignStep['type']
 
 const blockPalette: Array<{ kind: StepKind; label: string; description?: string }> = [
   { kind: 'openUrl', label: 'Go to URL', description: 'Navigate current tab to URL' },
+  { kind: 'openTab', label: 'Open tab', description: 'New tab, optional URL' },
+  { kind: 'closeTab', label: 'Close tab', description: 'Close the newest tab' },
   { kind: 'click', label: 'Click', description: 'Click an element by selector' },
+  { kind: 'hover', label: 'Hover', description: 'Hover over an element by selector' },
   { kind: 'type', label: 'Input text', description: 'Type text into an input' },
+  {
+    kind: 'waitForSelector',
+    label: 'Wait for element',
+    description: 'Block until a selector appears'
+  },
   { kind: 'scrollBy', label: 'Scroll', description: 'Scroll by X/Y pixels' },
+  { kind: 'scrollTo', label: 'Scroll to', description: 'Absolute scroll to X/Y' },
   { kind: 'waitMs', label: 'Wait', description: 'Pause execution' },
   { kind: 'press', label: 'Press key', description: 'Keyboard press' },
+  { kind: 'screenshot', label: 'Screenshot', description: 'Capture a PNG (optional path)' },
   { kind: 'eval', label: 'Eval', description: 'Run custom JS in page context' },
-  { kind: 'exportCookies', label: 'Export cookies', description: 'Log cookies count (v1)' },
+  { kind: 'exportCookies', label: 'Export cookies', description: 'Log cookies into run log' },
   { kind: 'closeProfile', label: 'Close browser', description: 'Close profile window' }
 ]
 
@@ -32,11 +42,17 @@ type Block =
       url: string
       waitUntil?: 'domcontentloaded' | 'load' | 'networkidle0' | 'networkidle2'
     }
+  | { id: BlockId; type: 'openTab'; url: string; waitUntil?: 'domcontentloaded' | 'load' }
+  | { id: BlockId; type: 'closeTab' }
   | { id: BlockId; type: 'click'; selector: string }
+  | { id: BlockId; type: 'hover'; selector: string }
   | { id: BlockId; type: 'type'; selector: string; text: string; delayMs?: number }
+  | { id: BlockId; type: 'waitForSelector'; selector: string; timeout?: number }
   | { id: BlockId; type: 'scrollBy'; x: number; y: number }
+  | { id: BlockId; type: 'scrollTo'; x: number; y: number }
   | { id: BlockId; type: 'waitMs'; ms: number }
   | { id: BlockId; type: 'press'; key: string }
+  | { id: BlockId; type: 'screenshot'; path?: string }
   | { id: BlockId; type: 'eval'; script: string }
   | { id: BlockId; type: 'exportCookies' }
   | { id: BlockId; type: 'closeProfile' }
@@ -55,6 +71,7 @@ function blockToStep(block: Block): CampaignStep {
 export function CampaignsPage(): React.JSX.Element {
   const [running, setRunning] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
+  const [runStatus, setRunStatus] = useState<'running' | 'succeeded' | 'failed' | 'cancelled'>()
   const [profileId, setProfileId] = useState<string>('')
 
   const [campaignName, setCampaignName] = useState('New campaign')
@@ -84,16 +101,28 @@ export function CampaignsPage(): React.JSX.Element {
             ...prev,
             { id, type: 'openUrl', url: 'https://example.com', waitUntil: 'domcontentloaded' }
           ]
+        case 'openTab':
+          return [...prev, { id, type: 'openTab', url: 'https://example.com' }]
+        case 'closeTab':
+          return [...prev, { id, type: 'closeTab' }]
         case 'click':
           return [...prev, { id, type: 'click', selector: '' }]
+        case 'hover':
+          return [...prev, { id, type: 'hover', selector: '' }]
         case 'type':
           return [...prev, { id, type: 'type', selector: '', text: '' }]
+        case 'waitForSelector':
+          return [...prev, { id, type: 'waitForSelector', selector: '', timeout: 15000 }]
         case 'scrollBy':
           return [...prev, { id, type: 'scrollBy', x: 0, y: 800 }]
+        case 'scrollTo':
+          return [...prev, { id, type: 'scrollTo', x: 0, y: 0 }]
         case 'waitMs':
           return [...prev, { id, type: 'waitMs', ms: 1000 }]
         case 'press':
           return [...prev, { id, type: 'press', key: 'Enter' }]
+        case 'screenshot':
+          return [...prev, { id, type: 'screenshot', path: '' }]
         case 'eval':
           return [...prev, { id, type: 'eval', script: 'return document.title' }]
         case 'exportCookies':
@@ -133,9 +162,28 @@ export function CampaignsPage(): React.JSX.Element {
     try {
       const result = await ipc.campaignsRun({
         campaign,
-        profileId: profileId.trim() ? Number(profileId) : undefined
+        profileIds: profileId.trim() ? [Number(profileId)] : undefined
       })
-      setRunId(result.runId)
+      const id = result.runIds[0]
+      setRunId(id)
+      const poll = setInterval(() => {
+        void ipc
+          .campaignsRunGet({ runId: id })
+          .then((state) => {
+            if (!state) return
+            const status = (state.run as { status?: string })?.status
+            if (status === 'succeeded') {
+              setRunStatus('succeeded')
+              clearInterval(poll)
+            } else if (status === 'failed' || status === 'cancelled') {
+              setRunStatus(status)
+              clearInterval(poll)
+            } else {
+              setRunStatus('running')
+            }
+          })
+          .catch(() => clearInterval(poll))
+      }, 500)
     } finally {
       setRunning(false)
     }
@@ -145,12 +193,24 @@ export function CampaignsPage(): React.JSX.Element {
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-lg font-semibold">Campaigns</h1>
+          <h1 className="font-display text-xl font-extrabold tracking-tight">Campaigns</h1>
           <p className="text-sm text-muted-foreground">
             Build programmable campaigns from stackable blocks and run them on a profile.
           </p>
         </div>
-        {runId ? <Badge variant="secondary">Last run: {runId}</Badge> : null}
+        {runId ? (
+          <Badge
+            variant={
+              runStatus === 'failed'
+                ? 'danger'
+                : runStatus === 'succeeded'
+                  ? 'success'
+                  : 'secondary'
+            }
+          >
+            Last run {runStatus ?? 'running'}: {runId}
+          </Badge>
+        ) : null}
       </div>
 
       <Card>
@@ -202,7 +262,7 @@ export function CampaignsPage(): React.JSX.Element {
               {blocks.map((b, idx) => (
                 <div
                   key={b.id}
-                  className="rounded-lg border border-border bg-card/40 p-3 shadow-sm"
+                  className="rounded-none border border-tv-border bg-tv-surface-subtle p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -253,6 +313,22 @@ export function CampaignsPage(): React.JSX.Element {
                       </div>
                     ) : null}
 
+                    {b.type === 'openTab' ? (
+                      <div className="space-y-1 md:col-span-2">
+                        <Label>URL (optional)</Label>
+                        <Input
+                          value={b.url}
+                          onChange={(e) => updateBlock(b.id, { url: e.target.value })}
+                        />
+                      </div>
+                    ) : null}
+
+                    {b.type === 'closeTab' ? (
+                      <div className="text-xs text-muted-foreground md:col-span-2">
+                        Closes the newest tab (keeps at least one open).
+                      </div>
+                    ) : null}
+
                     {b.type === 'click' ? (
                       <div className="space-y-1 md:col-span-2">
                         <Label>Selector</Label>
@@ -262,6 +338,42 @@ export function CampaignsPage(): React.JSX.Element {
                           placeholder="#login"
                         />
                       </div>
+                    ) : null}
+
+                    {b.type === 'hover' ? (
+                      <div className="space-y-1 md:col-span-2">
+                        <Label>Selector</Label>
+                        <Input
+                          value={b.selector}
+                          onChange={(e) => updateBlock(b.id, { selector: e.target.value })}
+                          placeholder="#submit"
+                        />
+                      </div>
+                    ) : null}
+
+                    {b.type === 'waitForSelector' ? (
+                      <>
+                        <div className="space-y-1">
+                          <Label>Selector</Label>
+                          <Input
+                            value={b.selector}
+                            onChange={(e) => updateBlock(b.id, { selector: e.target.value })}
+                            placeholder="#results"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Timeout (ms, optional)</Label>
+                          <Input
+                            value={String(b.timeout ?? '')}
+                            onChange={(e) =>
+                              updateBlock(b.id, {
+                                timeout: e.target.value ? Number(e.target.value) : undefined
+                              })
+                            }
+                            placeholder="15000"
+                          />
+                        </div>
+                      </>
                     ) : null}
 
                     {b.type === 'type' ? (
@@ -323,6 +435,36 @@ export function CampaignsPage(): React.JSX.Element {
                           />
                         </div>
                       </>
+                    ) : null}
+
+                    {b.type === 'scrollTo' ? (
+                      <>
+                        <div className="space-y-1">
+                          <Label>Scroll X</Label>
+                          <Input
+                            value={String(b.x)}
+                            onChange={(e) => updateBlock(b.id, { x: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Scroll Y</Label>
+                          <Input
+                            value={String(b.y)}
+                            onChange={(e) => updateBlock(b.id, { y: Number(e.target.value) || 0 })}
+                          />
+                        </div>
+                      </>
+                    ) : null}
+
+                    {b.type === 'screenshot' ? (
+                      <div className="space-y-1 md:col-span-2">
+                        <Label>Path (optional)</Label>
+                        <Input
+                          value={b.path ?? ''}
+                          onChange={(e) => updateBlock(b.id, { path: e.target.value })}
+                          placeholder="/tmp/shot.png"
+                        />
+                      </div>
                     ) : null}
 
                     {b.type === 'eval' ? (

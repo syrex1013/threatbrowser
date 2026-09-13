@@ -1,38 +1,52 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
+/*
+ * ThreatVector design system (design.md).
+ * White surfaces, charcoal ink, signal red for priority only.
+ * Sharp geometry, borders before shadows, restrained motion.
+ */
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 100%;
+    --foreground: 210 11% 15%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 11% 15%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 15%;
 
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 0 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --success: 152 63% 31%;
+    --warning: 36 100% 36%;
+    --error: 354 70% 54%;
+    --info: 216 98% 52%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --secondary: 220 11% 95%;
+    --secondary-foreground: 210 11% 15%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 220 11% 95%;
+    --muted-foreground: 208 7% 39%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --accent: 220 11% 95%;
+    --accent-foreground: 210 11% 15%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 0 72% 51%;
+    --destructive: 354 70% 54%;
+    --destructive-foreground: 0 0% 100%;
 
-    --radius: 0.75rem;
+    --border: 210 14% 89%;
+    --input: 210 8% 70%;
+    --ring: 0 100% 50%;
+
+    --radius: 0.25rem;
+
+    --font-display: 'TT Mussels', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   }
 
   * {
@@ -43,21 +57,27 @@
     @apply bg-background text-foreground;
     margin: 0;
     min-height: 100vh;
-    font-family:
-      "Geist Sans",
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      Roboto,
-      'Helvetica Neue',
-      Arial,
-      'Noto Sans',
-      'Apple Color Emoji',
-      'Segoe UI Emoji';
+    font-family: var(--font-body);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+
+  /* Technical identifiers — seeds, UAs, IPs, endpoints — speak in mono. */
+  .data-mono {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0;
+  }
+
+  ::selection {
+    background: #ffe3e3;
   }
 }

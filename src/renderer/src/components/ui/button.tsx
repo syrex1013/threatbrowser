@@ -5,21 +5,27 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-tv ease-tv focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tv-red focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        success: 'bg-emerald-600 text-white hover:bg-emerald-600/90',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+        default:
+          'rounded-none border-2 border-tv-red bg-tv-red text-white hover:border-tv-red-hover hover:bg-tv-red-hover active:border-tv-red-active active:bg-tv-red-active active:translate-y-px',
+        secondary:
+          'rounded-none border border-tv-border-strong bg-transparent text-tv-ink hover:border-tv-ink hover:bg-tv-surface-subtle',
+        outline:
+          'rounded-none border border-tv-border-strong bg-transparent text-tv-ink hover:border-tv-ink hover:bg-tv-surface-subtle',
+        ghost:
+          'rounded-none bg-transparent text-tv-ink hover:bg-tv-surface-muted hover:text-tv-ink',
+        'outline-red':
+          'rounded-none border-2 border-tv-red bg-transparent text-tv-red hover:bg-tv-red-soft',
+        success: 'rounded-none bg-tv-success text-white hover:bg-[#146c43]',
+        destructive: 'rounded-none bg-tv-error text-white hover:bg-[#bb2d3b]'
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-md px-8',
+        default: 'h-[3.5rem] px-8',
+        sm: 'h-9 px-4',
+        lg: 'h-[3.75rem] px-10',
         icon: 'h-9 w-9'
       }
     },
@@ -31,8 +37,7 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 

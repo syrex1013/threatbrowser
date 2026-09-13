@@ -1,5 +1,6 @@
 import { createStore } from 'vuex'
-import { Profile, ProxyData } from '../types/types'
+import type { Profile } from '../../../shared/profileSettings'
+import type { ProxyData } from '../types/types'
 import logger from '../logger/logger' // Adjust the import path as necessary
 
 const store = createStore({
@@ -11,7 +12,7 @@ const store = createStore({
   },
   mutations: {
     createProfile(state, profile: Profile) {
-      logger.info(`[store-mutation] Creating profile: ${profile.name}`)
+      logger.info(`[store-mutation] Creating profile: ${profile.id}`)
       state.profiles.push(profile)
     },
     launchProfile(state, profile: Profile) {
@@ -26,8 +27,8 @@ const store = createStore({
       state.profiles = state.profiles.filter((p) => p.id !== profile.id)
     },
     editProfile(state, updatedProfile: Profile) {
-      logger.info(`[store-mutation] Editing profile: ${updatedProfile.name}`)
-      const index = state.profiles.findIndex((p) => p.name === updatedProfile.name)
+      logger.info(`[store-mutation] Editing profile: ${updatedProfile.id}`)
+      const index = state.profiles.findIndex((p) => p.id === updatedProfile.id)
       if (index !== -1) {
         state.profiles.splice(index, 1, updatedProfile)
       }
@@ -85,37 +86,42 @@ const store = createStore({
       try {
         const loadedProfiles = await window.electron.ipcRenderer.invoke('load-profiles', '')
         commit('setProfiles', loadedProfiles)
-      } catch (error) {
-        logger.info(`[store-action] Error loading profiles: ${error}`)
+      } catch {
+        logger.info('[store-action] Error loading profiles')
       }
     },
-    launchProfile({ commit }, profile: Profile) {
+    async launchProfile({ commit }, profile: Profile) {
       logger.info(`[store-action] Launching profile: ${profile.id}`)
-      window.electron.ipcRenderer.invoke('launch-profile', profile)
+      await window.electron.ipcRenderer.invoke('launch-profile', profile, profile.password)
       commit('launchProfile', profile)
     },
-    deleteProfile({ commit }, profile: Profile) {
+    async deleteProfile({ commit }, profile: Profile) {
       logger.info(`[store-action] Deleting profile: ${profile.id}`)
-      window.electron.ipcRenderer.invoke('delete-profile', profile)
+      await window.electron.ipcRenderer.invoke('delete-profile', profile)
       commit('deleteProfile', profile)
     },
-    createProfile({ commit }, profile: Profile) {
-      logger.info(`[store-action] Creating profile: ${profile.name}`)
-      window.electron.ipcRenderer.invoke('create-profile', profile)
-      commit('createProfile', profile)
+    async createProfile({ commit }, profile: Profile) {
+      logger.info('[store-action] Creating profile')
+      const created: Profile = await window.electron.ipcRenderer.invoke('create-profile', {
+        ...profile,
+        id: 0
+      })
+      commit('createProfile', created)
+      return created
     },
-    editProfile({ commit }, updatedProfile: Profile) {
-      logger.info(`[store-action] Editing profile: ${updatedProfile.name}`)
-      window.electron.ipcRenderer.invoke('edit-profile', updatedProfile)
-      commit('editProfile', updatedProfile)
+    async editProfile({ commit }, input: Profile & { currentPassword?: string }) {
+      const { currentPassword, ...updatedProfile } = input
+      logger.info(`[store-action] Editing profile: ${updatedProfile.id}`)
+      await window.electron.ipcRenderer.invoke('edit-profile', updatedProfile, currentPassword)
+      commit('editProfile', { ...updatedProfile, password: undefined })
     },
     async fetchProxies({ commit }) {
       logger.info('[store-action] Fetching proxies')
       try {
         const loadedProxies = await window.electron.ipcRenderer.invoke('load-proxies', '')
         commit('setProxies', loadedProxies)
-      } catch (error) {
-        logger.info(`[store-action] Error loading proxies: ${error}`)
+      } catch {
+        logger.info('[store-action] Error loading proxies')
       }
     },
     deleteProxy({ commit }, proxy: ProxyData) {
@@ -127,7 +133,7 @@ const store = createStore({
       try {
         let proxy: ProxyData
         if (typeof proxyInput === 'string') {
-          logger.info(`[store-action] Parsing and creating proxy from string: ${proxyInput}`)
+          logger.info('[store-action] Creating proxy')
           proxy = await window.electron.ipcRenderer.invoke('create-proxy', proxyInput)
         } else {
           logger.info(`[store-action] Creating proxy from ProxyData object: ${proxyInput.id}`)
@@ -137,7 +143,7 @@ const store = createStore({
         commit('createProxy', proxy)
         return proxy.id
       } catch (error) {
-        logger.info(`[store-action] Error creating proxy: ${error}`)
+        logger.info('[store-action] Error creating proxy')
         throw error
       }
     },
@@ -147,18 +153,18 @@ const store = createStore({
       commit('editProxy', updatedProxy)
     },
     async getProxyCountry({ commit }, { proxyId, proxy }: { proxyId: number; proxy: string }) {
-      logger.info(`[store-action] Getting country for proxy: ${proxy}`)
+      logger.info(`[store-action] Getting country for proxy: ${proxyId}`)
       try {
         const country = await window.electron.ipcRenderer.invoke('get-proxy-country', proxy)
         commit('updateProxyCountry', { proxyId, country })
         return country
       } catch (error) {
-        logger.info(`[store-action] Error getting country for proxy ${proxyId}: ${error}`)
+        logger.info(`[store-action] Error getting country for proxy ${proxyId}`)
         throw error
       }
     },
     async getProxyStatus({ commit }, { proxyId, proxy }: { proxyId: number; proxy: string }) {
-      logger.info(`[store-action] Testing proxy: ${proxy}`)
+      logger.info(`[store-action] Testing proxy: ${proxyId}`)
       try {
         // Invoke the 'test-proxy' IPC method with the proxy string
         const isWorking = await window.electron.ipcRenderer.invoke('test-proxy', proxy)
@@ -170,7 +176,7 @@ const store = createStore({
         commit('updateProxyStatus', { proxyId, status })
         return status
       } catch (error) {
-        logger.info(`[store-action] Error testing proxy ${proxyId}: ${error}`)
+        logger.info(`[store-action] Error testing proxy ${proxyId}`)
         throw error
       }
     },
@@ -183,7 +189,7 @@ const store = createStore({
         // Commit the mutation to update the cookies in the Vuex state
         commit('updateProfileCookies', { profileId, cookies: cookiesString })
       } catch (error) {
-        logger.info(`[store-action] Error updating cookies for profile ${profileId}: ${error}`)
+        logger.info(`[store-action] Error updating cookies for profile ${profileId}`)
         throw error
       }
     }

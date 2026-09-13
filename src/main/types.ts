@@ -1,42 +1,8 @@
-export interface Profile {
-  id: number
-  name: string
-  useragent: string
-  notes: string
-  proxy: string
-  proxyId?: number
-  launched: boolean
-  cookies?: string
-  fingerprint?: Fingerprint
-  startUrl?: string
-  tags?: string[]
-}
+import type { Profile } from '../shared/profileSettings'
 
-export interface Fingerprint {
-  timezone?: string
-  locale?: string
-  languages?: string[]
-  platform?: string
-  hardwareConcurrency?: number
-  deviceMemory?: number
-  viewport?: {
-    width: number
-    height: number
-    deviceScaleFactor?: number
-  }
-  geolocation?: {
-    latitude: number
-    longitude: number
-    accuracy?: number
-  }
-  webrtc?: {
-    mode: 'default' | 'disable'
-  }
-  webgl?: {
-    vendor?: string
-    renderer?: string
-  }
-}
+export type StoredProfile = Omit<Profile, 'password' | 'hasPassword'> & { passwordHash?: string }
+
+export type ProxyAnonymity = 'elite' | 'anonymous' | 'transparent' | 'unknown'
 
 export interface ProxyData {
   name: string
@@ -49,4 +15,7 @@ export interface ProxyData {
   status: string
   country: string
   proxyId?: number
+  latencyMs?: number | null
+  anonymity?: ProxyAnonymity
+  lastCheckedAt?: number
 }

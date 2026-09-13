@@ -28,6 +28,10 @@ export type CampaignStep =
   | { type: 'type'; selector: string; text: string; delayMs?: number }
   | { type: 'press'; key: string }
   | { type: 'scrollBy'; x: number; y: number }
+  | { type: 'waitForSelector'; selector: string; timeout?: number }
+  | { type: 'hover'; selector: string }
+  | { type: 'screenshot'; path?: string }
+  | { type: 'scrollTo'; x: number; y: number }
   | { type: 'eval'; script: string }
   | { type: 'exportCookies' }
   | { type: 'closeProfile' }
@@ -75,8 +79,19 @@ export function validateCampaign(
         if (typeof step.text !== 'string') errors.push(`step[${idx}].text is required`)
         break
       case 'scrollBy':
+      case 'scrollTo':
         if (!Number.isFinite(step.x) || !Number.isFinite(step.y))
           errors.push(`step[${idx}] x/y must be numbers`)
+        break
+      case 'waitForSelector':
+        if (!step.selector) errors.push(`step[${idx}].selector is required`)
+        if (step.timeout !== undefined && (!Number.isFinite(step.timeout) || step.timeout < 0))
+          errors.push(`step[${idx}].timeout must be >= 0`)
+        break
+      case 'hover':
+        if (!step.selector) errors.push(`step[${idx}].selector is required`)
+        break
+      case 'screenshot':
         break
       case 'eval':
         if (!step.script) errors.push(`step[${idx}].script is required`)
